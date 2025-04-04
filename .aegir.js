@@ -63,13 +63,13 @@ export default {
 
       // --- libp2p-over-http
       const libp2pOverHttpHandler = await getLibp2pOverHttpHandler()
-      const express = createExpress(http.createServer(), libp2pOverHttpHandler.http)
-      const nodeHttp = createHttp(http.createServer(), libp2pOverHttpHandler.http)
-      const fastify = await createFastifyHTTP(http.createServer(), libp2pOverHttpHandler.http)
+      const express = createExpress(http.createServer(), libp2pOverHttpHandler.handler)
+      const nodeHttp = createHttp(http.createServer(), libp2pOverHttpHandler.handler)
+      const fastify = await createFastifyHTTP(http.createServer(), libp2pOverHttpHandler.handler)
 
       // --- libp2p-over-ws
-      const wss = createWss(http.createServer(), libp2pOverHttpHandler.http, libp2pOverHttpHandler.ws)
-      const fastifyWs = await createFastifyWebSocket(http.createServer(), libp2pOverHttpHandler.http, libp2pOverHttpHandler.ws)
+      const wss = createWss(http.createServer(), libp2pOverHttpHandler.handler)
+      const fastifyWs = await createFastifyWebSocket(http.createServer(), libp2pOverHttpHandler.handler)
 
       return {
         // http-over-libp2p

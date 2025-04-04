@@ -1,8 +1,9 @@
-import { TypedEventEmitter } from '@libp2p/interface'
+import { InvalidParametersError, TypedEventEmitter } from '@libp2p/interface'
 import { isPromise } from '@libp2p/utils/is-promise'
 import { byteStream, type ByteStream } from 'it-byte-stream'
 import { Uint8ArrayList } from 'uint8arraylist'
 import { PROTOCOL } from '../constants.js'
+import { getHost } from '../utils.js'
 import { ErrorEvent } from './events.js'
 import { encodeMessage, decodeMessage, CLOSE_MESSAGES } from './message.js'
 import { performClientUpgrade, performServerUpgrade, readResponse, toBytes } from './utils.js'
@@ -327,6 +328,75 @@ export class StreamWebSocket extends AbstractWebSocket {
           cb()
         }, err => {
           stream.abort(err)
+          cb()
+        })
+    }
+  }
+}
+
+export class RequestWebSocket extends AbstractWebSocket {
+  private readonly writer: WritableStreamDefaultWriter
+  private readonly writable: WritableStream
+
+  constructor (request: Request, writable: WritableStream, init?: WebSocketInit) {
+    super(new URL(`http://${getHost(request.headers)}${request.url}`), {
+      ...init,
+      isClient: false
+    })
+
+    if (request.body == null) {
+      throw new InvalidParametersError('Request body cannot be null')
+    }
+
+    this.writable = writable
+    this.writer = writable.getWriter()
+    const reader = request.body.getReader()
+
+    Promise.resolve()
+      .then(async () => {
+        this.readyState = this.OPEN
+        this.dispatchEvent(new Event('open'))
+
+        while (true) {
+          const { value, done } = await reader.read()
+
+          if (value != null) {
+            this._push(value)
+          }
+
+          if (done) {
+            this._remoteClosed()
+            break
+          }
+        }
+      })
+      .catch(err => {
+        this._errored(err)
+      })
+  }
+
+  _write (buf: Uint8ArrayList, cb: (err?: Error | null) => void): void {
+    this.writer?.write(buf)
+      .then(() => {
+        cb()
+      }, err => {
+        cb(err)
+      })
+  }
+
+  _close (err: Error, cb: () => void): void {
+    if (err != null) {
+      this.writable.abort(err)
+        .then(() => {
+          cb()
+        }, () => {
+          cb()
+        })
+    } else {
+      this.writable.close()
+        .then(() => {
+          cb()
+        }, () => {
           cb()
         })
     }

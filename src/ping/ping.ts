@@ -4,18 +4,21 @@ import { raceEvent } from 'race-event'
 import { raceSignal } from 'race-signal'
 import { equals as uint8ArrayEquals } from 'uint8arrays/equals'
 import { toMultiaddrs } from '../utils.js'
+import { webSocketHandler } from '../websocket-handler.js'
 import { HTTP_PING_PROTOCOL } from './index.js'
 import type { PingHTTPComponents, PingHTTP as PingHTTPInterface, PingOptions } from './index.js'
-import type { PeerId, Startable } from '@libp2p/interface'
+import type { Logger, PeerId, Startable } from '@libp2p/interface'
 import type { AbortOptions, Multiaddr } from '@multiformats/multiaddr'
 
 const PING_SIZE = 32
 
 export class PingHTTPService implements PingHTTPInterface, Startable {
   private readonly components: PingHTTPComponents
+  private readonly log: Logger
 
   constructor (components: PingHTTPComponents) {
     this.components = components
+    this.log = components.logger.forComponent('libp2p:http:ping')
 
     this.onHTTPRequest = this.onHTTPRequest.bind(this)
     this.onWebSocket = this.onWebSocket.bind(this)
@@ -28,13 +31,13 @@ export class PingHTTPService implements PingHTTPInterface, Startable {
   ]
 
   start (): void {
-    this.components.http.handleHTTPProtocol(HTTP_PING_PROTOCOL, this.onHTTPRequest)
-    this.components.http.handleWebSocketProtocol(HTTP_PING_PROTOCOL, this.onWebSocket)
+    this.components.http.handle(HTTP_PING_PROTOCOL, webSocketHandler(this.onWebSocket, {
+      fallback: this.onHTTPRequest
+    }))
   }
 
   stop (): void {
-    this.components.http.unhandleHTTPProtocol(HTTP_PING_PROTOCOL)
-    this.components.http.unhandleWebSocketProtocol(HTTP_PING_PROTOCOL)
+    this.components.http.unhandle(HTTP_PING_PROTOCOL)
   }
 
   async onHTTPRequest (req: Request): Promise<Response> {
@@ -81,6 +84,7 @@ export class PingHTTPService implements PingHTTPInterface, Startable {
     // fill buffer with random data
     crypto.getRandomValues(buf)
 
+    this.log('ping %o', peer)
     const output = await raceSignal(options.webSocket === true ? this.webSocketPing(dialTarget, buf, options) : this.httpPing(dialTarget, buf, options), options?.signal)
     const respBuf = new Uint8Array(output, 0, output.byteLength)
 
@@ -110,21 +114,26 @@ export class PingHTTPService implements PingHTTPInterface, Startable {
   }
 
   async webSocketPing (dialTarget: Multiaddr[], buf: Uint8Array, options: AbortOptions): Promise<ArrayBuffer> {
+    this.log('opening websocket connection to %a', dialTarget)
     const socket = this.components.http.connect(dialTarget, [], options)
 
     if (socket.readyState !== WebSocket.OPEN) {
       await raceEvent(socket, 'open', options.signal)
+      this.log('websocket connection to %a open', dialTarget)
     }
 
     const p = new Promise<ArrayBuffer>((resolve, reject) => {
       socket.addEventListener('message', (evt) => {
+        this.log('received ping response from %a', dialTarget)
         resolve(evt.data)
       })
-      socket.addEventListener('error', () => {
+      socket.addEventListener('error', (evt: any) => {
+        this.log('ping to %a errored - %e', dialTarget, evt.error ?? evt)
         reject(new Error('An error occurred'))
       })
     })
 
+    this.log('send ping message to %a', dialTarget)
     socket.send(buf)
 
     return p

@@ -1,13 +1,13 @@
 import { createWebSocketServer as createWss } from '../../src/websocket/index.js'
-import type { Libp2pOverHTTPHandler, Libp2pOverWSHandler } from './get-libp2p-over-http-handler.js'
+import type { Libp2pOverHTTPHandler } from './get-libp2p-over-http-handler.js'
 import type { Server } from 'node:http'
 
-export function createWebSocketServer (server: Server, httpHandler?: Libp2pOverHTTPHandler, wsHandler?: Libp2pOverWSHandler): Server {
+export function createWebSocketServer (server: Server, handler?: Libp2pOverHTTPHandler): Server {
   const wss = createWss()
   wss.addEventListener('connection', (evt) => {
     const ws = evt.webSocket
 
-    if (wsHandler?.(ws) === true) {
+    if (handler?.(ws) === true) {
       return
     }
 
@@ -27,7 +27,7 @@ export function createWebSocketServer (server: Server, httpHandler?: Libp2pOverH
     res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
     res.setHeader('Access-Control-Allow-Headers', '*')
 
-    if (httpHandler?.(req, res) === true) {
+    if (handler?.(req, res) === true) {
       return
     }
 

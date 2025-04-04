@@ -3,7 +3,7 @@ import { InvalidParametersError, ProtocolError } from '@libp2p/interface'
 import { base64pad } from 'multiformats/bases/base64'
 import { sha1 } from 'multiformats/hashes/sha1'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
-import { BAD_REQUEST, toUint8Array } from '../utils.js'
+import { BAD_REQUEST, toUint8Array, writeHeaders } from '../utils.js'
 import { StreamWebSocket } from './websocket.js'
 import type { HeaderInfo } from '../index.js'
 import type { AbortOptions, Stream } from '@libp2p/interface'
@@ -127,19 +127,14 @@ export async function * performClientUpgrade (url: URL, protocols: string[] = []
   yield req
 }
 
-/**
- * Implements the WebSocket handshake from the server's perspective
- */
-export async function * performServerUpgrade (headers: Headers | Record<string, string | string[] | undefined>): AsyncGenerator<Uint8Array> {
+export async function getServerUpgradeHeaders (headers: Headers | Record<string, string | string[] | undefined>): Promise<Headers> {
   if (getHeader(headers, 'sec-websocket-version') !== '13') {
-    yield BAD_REQUEST
     throw new ProtocolError('Invalid version')
   }
 
   const secWebSocketKey = getHeader(headers, 'sec-websocket-key')
 
   if (secWebSocketKey == null) {
-    yield BAD_REQUEST
     throw new ProtocolError('Missing sec-websocket-key')
   }
 
@@ -149,16 +144,31 @@ export async function * performServerUpgrade (headers: Headers | Record<string, 
     hash.digest
   ).substring(1)
 
-  const message = [
-    'HTTP/1.1 101 Switching Protocols',
-    'Upgrade: websocket',
-    'Connection: upgrade',
-    `Sec-WebSocket-Accept: ${webSocketAccept}`,
-    '',
-    ''
-  ]
+  return new Headers({
+    Upgrade: 'websocket',
+    Connection: 'upgrade',
+    'Sec-WebSocket-Accept': webSocketAccept
+  })
+}
 
-  yield uint8ArrayFromString(message.join('\r\n'))
+/**
+ * Implements the WebSocket handshake from the server's perspective
+ */
+export async function * performServerUpgrade (headers: Headers | Record<string, string | string[] | undefined>): AsyncGenerator<Uint8Array> {
+  try {
+    const responseHeaders = await getServerUpgradeHeaders(headers)
+
+    const message = [
+      'HTTP/1.1 101 Switching Protocols',
+      ...writeHeaders(responseHeaders),
+      '',
+      ''
+    ]
+
+    yield uint8ArrayFromString(message.join('\r\n'))
+  } catch {
+    yield BAD_REQUEST
+  }
 }
 
 export function streamToWebSocket (info: HeaderInfo, stream: Stream): WebSocket {

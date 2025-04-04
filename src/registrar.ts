@@ -1,80 +1,151 @@
+import { HTTPParser } from '@achingbrain/http-parser-js'
 import { InvalidParametersError } from '@libp2p/interface'
-import type { HTTPRequestHandler, WebSocketHandler } from './index.js'
-import type { ComponentLogger, Logger } from '@libp2p/interface'
-
-export type ProtocolID = string
-
-export interface ProtocolLocation {
-  path: string
-}
-
-export type ProtocolMap = Record<ProtocolID, ProtocolLocation>
+import { queuelessPushable } from 'it-queueless-pushable'
+import { Uint8ArrayList } from 'uint8arraylist'
+import { PROTOCOL, WEBSOCKET_HANDLER, WELL_KNOWN_PROTOCOLS } from './constants.js'
+import { NOT_FOUND_RESPONSE, responseToStream, streamToRequest } from './utils.js'
+import { wellKnownHandler } from './well-known-handler.js'
+import type { Endpoint, HTTPRequestHandler, HeaderInfo, ProtocolMap, RequestHandlerOptions, WebSocketHandler } from './index.js'
+import type { ComponentLogger, IncomingStreamData, Logger, Stream } from '@libp2p/interface'
+import type { Registrar } from '@libp2p/interface-internal'
 
 export interface HTTPRegistrarComponents {
   logger: ComponentLogger
+  registrar: Registrar
+}
+
+export interface HTTPRegistrarInit {
+  server?: Endpoint
+}
+
+interface ProtocolHandler {
+  protocol: string
+  path: string
+  handler: HTTPRequestHandler
+  authenticated?: boolean
 }
 
 export class HTTPRegistrar {
   private readonly log: Logger
-  private protocols: Array<{ protocol: string, path: string, http?: HTTPRequestHandler, ws?: WebSocketHandler }>
+  private readonly components: HTTPRegistrarComponents
+  private protocols: ProtocolHandler[]
+  private readonly endpoint?: Endpoint
+  private readonly wellKnownHandler: ProtocolHandler
 
-  constructor (components: HTTPRegistrarComponents) {
+  constructor (components: HTTPRegistrarComponents, init: HTTPRegistrarInit = {}) {
+    this.components = components
     this.log = components.logger.forComponent('libp2p:http:registrar')
     this.protocols = []
-  }
-
-  canHandleHTTP (req: { url?: string }): boolean {
-    return this.protocols.find(p => p.path === req.url && p.http != null) != null
-  }
-
-  canHandleWebSocket (req: { url?: string }): boolean {
-    return this.protocols.find(p => p.path === req.url && p.ws != null) != null
-  }
-
-  async handleHTTP (request: Request): Promise<Response> {
-    const url = new URL(request.url)
-
-    this.log('search for handler on path %s', url.pathname)
-
-    const result = this.protocols.find(p => p.path === url.pathname)
-
-    if (result?.http == null) {
-      return new Response(null, {
-        status: 404,
-        statusText: 'Not Found'
-      })
+    this.onStream = this.onStream.bind(this)
+    this.endpoint = init.server
+    this.wellKnownHandler = {
+      protocol: '',
+      path: WELL_KNOWN_PROTOCOLS,
+      handler: wellKnownHandler(this)
     }
-
-    this.log('found for handler for HTTP protocol %s on path %s', result.protocol, url.pathname)
-
-    return result.http(request)
   }
 
-  handleWebSocket (ws: WebSocket): void {
-    this.log('search for handler on path %s', ws.url)
+  async start (): Promise<void> {
+    await this.components.registrar.handle(PROTOCOL, (data) => {
+      this.onStream(data)
+        .catch(err => {
+          this.log.error('could not handle incoming stream - %e', err)
+        })
+    })
+  }
 
-    const result = this.protocols.find(p => p.path === ws.url)
+  async stop (): Promise<void> {
+    await this.components.registrar.unhandle(PROTOCOL)
+  }
 
-    if (result?.ws == null) {
-      ws.close(404, 'Not Found')
+  private async onStream ({ stream, connection }: IncomingStreamData): Promise<void> {
+    const info = await readHeaders(stream)
+
+    if (this.canHandle(info)) {
+      this.log('handling incoming request %s %s', info.method, info.url)
+      const res = await this.onRequest(streamToRequest(info, stream))
+      await responseToStream(res, stream)
+      await stream.close()
       return
     }
 
-    this.log('found for handler for WebSocket protocol %s on path %s', result.protocol, ws.url)
+    // pass request to endpoint if available
+    if (this.endpoint == null) {
+      this.log('cannot handle incoming request %s %s and no endpoint configured', info.method, info.url)
+      await stream.sink([NOT_FOUND_RESPONSE])
+      return
+    }
 
-    result.ws(ws)
+    this.log('passing incoming request %s %s to endpoint', info.method, info.url)
+    this.endpoint.inject(info, stream, connection)
+      .catch(err => {
+        this.log.error('error injecting request to endpoint - %e', err)
+        stream.abort(err)
+      })
   }
 
-  handleHTTPProtocol (protocol: string, handler: HTTPRequestHandler, path: string = crypto.randomUUID()): void {
-    for (const p of this.protocols) {
-      if (p.protocol === protocol) {
-        if (p.http != null) {
-          throw new InvalidParametersError(`HTTP protocol handler for ${protocol} already registered`)
-        }
+  canHandle (req: { url?: string }): boolean {
+    if (req.url === WELL_KNOWN_PROTOCOLS || this.protocols.find(p => p.path === req.url) != null) {
+      this.log('can handle %s', req.url)
+      return true
+    }
 
-        p.http = handler
+    this.log('cannot handle %s', req.url)
+    return false
+  }
+
+  async onRequest (request: Request): Promise<Response> {
+    const result = this.findHandler(request.url)
+
+    if (result?.handler != null) {
+      return result.handler(request)
+    }
+
+    return new Response(null, {
+      status: 404,
+      statusText: 'Not Found'
+    })
+  }
+
+  onWebSocket (ws: WebSocket): void {
+    const result = this.findHandler(ws.url)
+
+    if (result != null) {
+      // @ts-expect-error hidden field
+      const wsHandler: WebSocketHandler = result.handler[WEBSOCKET_HANDLER]
+
+      if (wsHandler != null) {
+        wsHandler(ws)
         return
       }
+    }
+
+    ws.close(404, 'Not Found')
+  }
+
+  private findHandler (url: string): ProtocolHandler | undefined {
+    const pathname = url.startsWith('/') ? url : new URL(url).pathname
+
+    if (pathname === WELL_KNOWN_PROTOCOLS) {
+      return this.wellKnownHandler
+    }
+
+    this.log('search for handler on path %s', pathname)
+
+    const handler = this.protocols.find(p => p.path === pathname)
+
+    if (handler != null) {
+      this.log('found handler for HTTP protocol %s on path %s', handler.protocol, url)
+    }
+
+    return handler
+  }
+
+  handle (protocol: string, handler: HTTPRequestHandler, options: RequestHandlerOptions = {}): void {
+    let path = options.path ?? crypto.randomUUID()
+
+    if (this.protocols.find(p => p.protocol === protocol) != null) {
+      throw new InvalidParametersError(`HTTP protocol handler for ${protocol} already registered`)
     }
 
     if (path === '' || !path.startsWith('/')) {
@@ -85,62 +156,16 @@ export class HTTPRegistrar {
     this.protocols.push({
       protocol,
       path,
-      http: handler
+      handler,
+      authenticated: options.authenticate
     })
 
     // sort by path length desc so the most specific handler is invoked first
     this.protocols.sort(({ path: a }, { path: b }) => b.length - a.length)
   }
 
-  handleWebSocketProtocol (protocol: string, handler: WebSocketHandler, path: string = crypto.randomUUID()): void {
-    for (const p of this.protocols) {
-      if (p.protocol === protocol) {
-        if (p.ws != null) {
-          throw new InvalidParametersError(`WebSocket protocol handler for ${protocol} already registered`)
-        }
-
-        p.ws = handler
-        return
-      }
-    }
-
-    if (path === '' || !path.startsWith('/')) {
-      path = `/${path}`
-    }
-
-    // add handler
-    this.protocols.push({
-      protocol,
-      path,
-      ws: handler
-    })
-
-    // sort by path length desc so the most specific handler is invoked first
-    this.protocols.sort(({ path: a }, { path: b }) => b.length - a.length)
-  }
-
-  unhandleHTTPProtocol (protocol: string): void {
-    this.protocols = this.protocols.filter(p => {
-      if (p.protocol === protocol) {
-        delete p.http
-
-        return p.ws != null
-      }
-
-      return true
-    })
-  }
-
-  unhandleWebSocketProtocol (protocol: string): void {
-    this.protocols = this.protocols.filter(p => {
-      if (p.protocol === protocol) {
-        delete p.ws
-
-        return p.http != null
-      }
-
-      return true
-    })
+  unhandle (protocol: string): void {
+    this.protocols = this.protocols.filter(p => p.protocol === protocol)
   }
 
   getProtocolMap (): ProtocolMap {
@@ -154,4 +179,58 @@ export class HTTPRegistrar {
 
     return output
   }
+}
+
+/**
+ * Reads HTTP headers from an incoming stream
+ */
+async function readHeaders (stream: Stream): Promise<HeaderInfo> {
+  return new Promise<any>((resolve, reject) => {
+    const parser = new HTTPParser('REQUEST')
+    const source = queuelessPushable<Uint8ArrayList>()
+    const earlyData = new Uint8ArrayList()
+    let headersComplete = false
+
+    parser[HTTPParser.kOnHeadersComplete] = (info) => {
+      headersComplete = true
+      const headers = new Headers()
+
+      // set incoming headers
+      for (let i = 0; i < info.headers.length; i += 2) {
+        headers.set(info.headers[i].toLowerCase(), info.headers[i + 1])
+      }
+
+      resolve({
+        ...info,
+        headers,
+        raw: earlyData,
+        method: HTTPParser.methods[info.method]
+      })
+    }
+
+    // replace source with request body
+    const streamSource = stream.source
+    stream.source = source
+
+    Promise.resolve().then(async () => {
+      for await (const chunk of streamSource) {
+        // only use the message parser until the headers have been read
+        if (!headersComplete) {
+          earlyData.append(chunk)
+          parser.execute(chunk.subarray())
+        } else {
+          await source.push(new Uint8ArrayList(chunk))
+        }
+      }
+
+      await source.end()
+    })
+      .catch((err: Error) => {
+        stream.abort(err)
+        reject(err)
+      })
+      .finally(() => {
+        parser.finish()
+      })
+  })
 }

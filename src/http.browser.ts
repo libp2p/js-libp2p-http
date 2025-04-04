@@ -1,23 +1,19 @@
-import { HTTPParser } from '@achingbrain/http-parser-js'
 import { UnsupportedOperationError, serviceCapabilities } from '@libp2p/interface'
 import { fromStringTuples } from '@multiformats/multiaddr'
-import { queuelessPushable } from 'it-queueless-pushable'
-import { Uint8ArrayList } from 'uint8arraylist'
 import { PROTOCOL, WELL_KNOWN_PROTOCOLS } from './constants.js'
 import { fetch } from './fetch/index.js'
 import { HTTPRegistrar } from './registrar.js'
-import { NOT_FOUND_RESPONSE, responseToStream, streamToRequest, toMultiaddrs, toResource } from './utils.js'
-import { streamToWebSocket } from './websocket/utils.js'
+import { getHost, toMultiaddrs, toResource } from './utils.js'
 import { WebSocket as WebSocketClass } from './websocket/websocket.js'
-import type { Endpoint, HTTPInit, HTTP as HTTPInterface, WebSocketInit, HeaderInfo, HTTPRequestHandler, WebSocketHandler } from './index.js'
-import type { ProtocolMap } from './well-known-handler.js'
-import type { ComponentLogger, IncomingStreamData, Logger, PeerId, Startable, Stream } from '@libp2p/interface'
+import type { HTTPInit, HTTP as HTTPInterface, WebSocketInit, HTTPRequestHandler, ProtocolMap, RequestHandlerOptions } from './index.js'
+import type { ComponentLogger, Logger, PeerId, PrivateKey, Startable } from '@libp2p/interface'
 import type { ConnectionManager, Registrar } from '@libp2p/interface-internal'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
 const HTTP_PATH_CODEC = 0x01e1
 
 export interface HTTPComponents {
+  privateKey: PrivateKey
   registrar: Registrar
   connectionManager: ConnectionManager
   logger: ComponentLogger
@@ -26,15 +22,13 @@ export interface HTTPComponents {
 export class HTTP implements HTTPInterface, Startable {
   private readonly log: Logger
   protected readonly components: HTTPComponents
-  private readonly endpoint?: Endpoint
+
   private readonly httpRegistrar: HTTPRegistrar
 
   constructor (components: HTTPComponents, init: HTTPInit = {}) {
     this.components = components
     this.log = components.logger.forComponent('libp2p:http')
-    this.httpRegistrar = new HTTPRegistrar(components)
-    this.endpoint = init.server
-    this.onStream = this.onStream.bind(this)
+    this.httpRegistrar = new HTTPRegistrar(components, init)
   }
 
   readonly [Symbol.toStringTag] = '@libp2p/http'
@@ -44,117 +38,11 @@ export class HTTP implements HTTPInterface, Startable {
   ]
 
   async start (): Promise<void> {
-    await this.components.registrar.handle(PROTOCOL, (data) => {
-      this.onStream(data)
-        .catch(err => {
-          this.log.error('could not handle incoming stream - %e', err)
-        })
-    })
+    await this.httpRegistrar.start()
   }
 
   async stop (): Promise<void> {
-    await this.components.registrar.unhandle(PROTOCOL)
-  }
-
-  private async onStream ({ stream, connection }: IncomingStreamData): Promise<void> {
-    const info = await readHeaders(stream)
-    const isWebSocketRequest = info.headers.get('upgrade') === 'websocket'
-
-    if (isWebSocketRequest && this.canHandleWebSocket(info)) {
-      this.log('handling incoming request %s %s', info.method, info.url)
-      this.handleWebSocket(streamToWebSocket(info, stream))
-      return
-    }
-
-    if (!isWebSocketRequest && this.canHandleHTTP(info)) {
-      this.log('handling incoming request %s %s', info.method, info.url)
-      const res = await this.handleHTTP(streamToRequest(info, stream))
-      await responseToStream(res, stream)
-      await stream.close()
-      return
-    }
-
-    // pass request to endpoint if available
-    if (this.endpoint == null) {
-      this.log('cannot handle incoming request %s %s and no endpoint configured', info.method, info.url)
-      await stream.sink([NOT_FOUND_RESPONSE])
-      return
-    }
-
-    this.log('passing incoming request %s %s to endpoint', info.method, info.url)
-    this.endpoint.inject(info, stream, connection)
-      .catch(err => {
-        this.log.error('error injecting request to endpoint - %e', err)
-        stream.abort(err)
-      })
-  }
-
-  canHandleHTTP (req: { url?: string }): boolean {
-    if (req.url == null) {
-      return false
-    }
-
-    if (req.url === WELL_KNOWN_PROTOCOLS) {
-      return true
-    }
-
-    // try handler registered with registrar
-    if (this.httpRegistrar.canHandleHTTP(req)) {
-      return true
-    }
-
-    return false
-  }
-
-  canHandleWebSocket (req: { url?: string }): boolean {
-    if (req.url == null) {
-      return false
-    }
-
-    if (req.url === WELL_KNOWN_PROTOCOLS) {
-      return true
-    }
-
-    // try handler registered with registrar
-    if (this.httpRegistrar.canHandleWebSocket(req)) {
-      return true
-    }
-
-    return false
-  }
-
-  /**
-   * Handle an incoming HTTP request
-   */
-  async handleHTTP (req: Request): Promise<Response> {
-    const url = new URL(req.url)
-
-    // serve protocol map
-    if (url.pathname === WELL_KNOWN_PROTOCOLS) {
-      const map = JSON.stringify(this.getProtocolMap())
-      return new Response(map, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': `${map.length}`
-        }
-      })
-    }
-
-    // pass request to handler
-    return this.httpRegistrar.handleHTTP(req)
-  }
-
-  handleWebSocket (ws: WebSocket): void {
-    // serve protocol map
-    if (ws.url === WELL_KNOWN_PROTOCOLS) {
-      const map = JSON.stringify(this.getProtocolMap())
-      ws.send(map)
-      ws.close()
-      return
-    }
-
-    // pass request to handler
-    this.httpRegistrar.handleWebSocket(ws)
+    await this.httpRegistrar.stop()
   }
 
   agent (...args: any[]): any {
@@ -166,7 +54,7 @@ export class HTTP implements HTTPInterface, Startable {
   }
 
   connect (resource: string | URL | Multiaddr | Multiaddr[], protocols?: string[], init?: WebSocketInit): globalThis.WebSocket {
-    let url = toResource(resource)
+    const url = toResource(resource)
 
     if (url instanceof URL) {
       const socket = new globalThis.WebSocket(url, protocols)
@@ -176,20 +64,9 @@ export class HTTP implements HTTPInterface, Startable {
     }
 
     // strip http-path tuple but record the value if set
-    let httpPath = '/'
-    url = url.map(ma => {
-      return fromStringTuples(
-        ma.stringTuples().filter(t => {
-          if (t[0] === HTTP_PATH_CODEC && t[1] != null) {
-            httpPath = `/${t[1]}`
-          }
+    const { addresses, httpPath } = stripHTTPPath(url)
 
-          return t[0] !== HTTP_PATH_CODEC
-        })
-      )
-    })
-
-    return new WebSocketClass(url, new URL(`http://example.com${decodeURIComponent(httpPath)}`), this.components.connectionManager, {
+    return new WebSocketClass(addresses, new URL(`http://${getHost(init?.headers)}${decodeURIComponent(httpPath)}`), this.components.connectionManager, {
       ...init,
       protocols,
       isClient: true
@@ -197,34 +74,23 @@ export class HTTP implements HTTPInterface, Startable {
   }
 
   async fetch (resource: string | URL | Multiaddr | Multiaddr[], init: RequestInit = {}): Promise<Response> {
-    let url = toResource(resource)
+    const url = toResource(resource)
 
     if (url instanceof URL) {
       return globalThis.fetch(url, init)
     }
 
     // strip http-path tuple but record the value if set
-    let httpPath = '/'
-    url = url.map(ma => {
-      return fromStringTuples(
-        ma.stringTuples().filter(t => {
-          if (t[0] === HTTP_PATH_CODEC && t[1] != null) {
-            httpPath = `/${t[1]}`
-          }
+    const { addresses, httpPath } = stripHTTPPath(url)
 
-          return t[0] !== HTTP_PATH_CODEC
-        })
-      )
-    })
-
-    const connection = await this.components.connectionManager.openConnection(url, {
+    const connection = await this.components.connectionManager.openConnection(addresses, {
       signal: init.signal ?? undefined
     })
     const stream = await connection.newStream(PROTOCOL, {
       signal: init.signal ?? undefined
     })
 
-    return fetch(stream, new URL(`http://example.com${decodeURIComponent(httpPath)}`), {
+    return fetch(stream, new URL(`http://${getHost(init?.headers)}${decodeURIComponent(httpPath)}`), {
       ...init,
       logger: this.components.logger
     })
@@ -256,20 +122,24 @@ export class HTTP implements HTTPInterface, Startable {
     return peerMeta[protocol].path
   }
 
-  handleHTTPProtocol (protocol: string, handler: HTTPRequestHandler, path?: string): void {
-    this.httpRegistrar.handleHTTPProtocol(protocol, handler, path)
+  canHandle (req: { url?: string }): boolean {
+    return this.httpRegistrar.canHandle(req)
   }
 
-  handleWebSocketProtocol (protocol: string, handler: WebSocketHandler, path?: string): void {
-    this.httpRegistrar.handleWebSocketProtocol(protocol, handler, path)
+  async onRequest (req: Request): Promise<Response> {
+    return this.httpRegistrar.onRequest(req)
   }
 
-  unhandleHTTPProtocol (protocol: string): void {
-    this.httpRegistrar.unhandleHTTPProtocol(protocol)
+  onWebSocket (ws: WebSocket): void {
+    this.httpRegistrar.onWebSocket(ws)
   }
 
-  unhandleWebSocketProtocol (protocol: string): void {
-    this.httpRegistrar.unhandleWebSocketProtocol(protocol)
+  handle (protocol: string, handler: HTTPRequestHandler, options?: RequestHandlerOptions): void {
+    this.httpRegistrar.handle(protocol, handler, options)
+  }
+
+  unhandle (protocol: string): void {
+    this.httpRegistrar.unhandle(protocol)
   }
 
   getProtocolMap (): ProtocolMap {
@@ -277,56 +147,23 @@ export class HTTP implements HTTPInterface, Startable {
   }
 }
 
-/**
- * Reads HTTP headers from an incoming stream
- */
-async function readHeaders (stream: Stream): Promise<HeaderInfo> {
-  return new Promise<any>((resolve, reject) => {
-    const parser = new HTTPParser('REQUEST')
-    const source = queuelessPushable<Uint8ArrayList>()
-    const earlyData = new Uint8ArrayList()
-    let headersComplete = false
-
-    parser[HTTPParser.kOnHeadersComplete] = (info) => {
-      headersComplete = true
-      const headers = new Headers()
-
-      // set incoming headers
-      for (let i = 0; i < info.headers.length; i += 2) {
-        headers.set(info.headers[i].toLowerCase(), info.headers[i + 1])
-      }
-
-      resolve({
-        ...info,
-        headers,
-        raw: earlyData,
-        method: HTTPParser.methods[info.method]
-      })
-    }
-
-    // replace source with request body
-    const streamSource = stream.source
-    stream.source = source
-
-    Promise.resolve().then(async () => {
-      for await (const chunk of streamSource) {
-        // only use the message parser until the headers have been read
-        if (!headersComplete) {
-          earlyData.append(chunk)
-          parser.execute(chunk.subarray())
-        } else {
-          await source.push(new Uint8ArrayList(chunk))
+function stripHTTPPath (addresses: Multiaddr[]): { httpPath: string, addresses: Multiaddr[] } {
+  // strip http-path tuple but record the value if set
+  let httpPath = '/'
+  addresses = addresses.map(ma => {
+    return fromStringTuples(
+      ma.stringTuples().filter(t => {
+        if (t[0] === HTTP_PATH_CODEC && t[1] != null) {
+          httpPath = `/${t[1]}`
         }
-      }
 
-      await source.end()
-    })
-      .catch((err: Error) => {
-        stream.abort(err)
-        reject(err)
+        return t[0] !== HTTP_PATH_CODEC
       })
-      .finally(() => {
-        parser.finish()
-      })
+    )
   })
+
+  return {
+    httpPath,
+    addresses
+  }
 }

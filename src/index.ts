@@ -346,10 +346,9 @@
 
 import { HTTP as HTTPClass } from './http.js'
 import type { HTTPComponents } from './http.js'
-import type { ProtocolMap } from './well-known-handler.js'
 import type { AbortOptions, Connection, PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
-import type { Agent, AgentOptions } from 'node:http'
+import type { Agent, AgentOptions, IncomingMessage } from 'node:http'
 import type { Uint8ArrayList } from 'uint8arraylist'
 import type { Dispatcher, Agent as UnidiciAgent } from 'undici'
 
@@ -364,9 +363,31 @@ export interface WebSocketInit extends AbortOptions {
   maxMessageSize?: number
 
   /**
+   * If true, perform PeerId auth for the remote server before making the
+   * request.
+   *
+   * @see https://github.com/libp2p/specs/blob/master/http/peer-id-auth.md
+   *
+   * @default false
+   */
+  authenticate?: boolean
+
+  /**
    * Headers to send with the initial upgrade request
    */
   headers?: HeadersInit
+}
+
+export interface FetchInit extends RequestInit {
+  /**
+   * If true, perform PeerId auth for the remote server before making the
+   * request.
+   *
+   * @see https://github.com/libp2p/specs/blob/master/http/peer-id-auth.md
+   *
+   * @default false
+   */
+  authenticate?: boolean
 }
 
 export interface HTTPRequestHandler {
@@ -375,6 +396,34 @@ export interface HTTPRequestHandler {
 
 export interface WebSocketHandler {
   (ws: WebSocket): void
+}
+
+export type ProtocolID = string
+
+export interface ProtocolDescriptor {
+  path: string
+}
+
+export type ProtocolMap = Record<ProtocolID, ProtocolDescriptor>
+
+export interface RequestHandlerOptions {
+  /**
+   * If true, all requests to this handler will be authenticated using peer id
+   * auth before they are passed to the handler.
+   *
+   * @see https://github.com/libp2p/specs/blob/master/http/peer-id-auth.md
+   *
+   * @default false
+   */
+  authenticate?: boolean
+
+  /**
+   * Specify a path to serve the protocol from. If omitted a random one will be
+   * generated which can be looked up from the protocol map using
+   * `getProtocolMap()` or by making a GET request to
+   * `/.well-known/libp2p/protocols`.
+   */
+  path?: string
 }
 
 /**
@@ -438,22 +487,12 @@ export interface HTTP {
   /**
    * Register a listener for a HTTP protocol
    */
-  handleHTTPProtocol (protocol: string, handler: HTTPRequestHandler, path?: string): void
-
-  /**
-   * Register a listener for a WebSocket protocol
-   */
-  handleWebSocketProtocol (protocol: string, handler: WebSocketHandler, path?: string): void
+  handle (protocol: string, handler: HTTPRequestHandler, options?: RequestHandlerOptions): void
 
   /**
    * Remove a listener for a HTTP protocol
    */
-  unhandleHTTPProtocol (protocol: string): void
-
-  /**
-   * Remove a listener for a WebSocket protocol
-   */
-  unhandleWebSocketProtocol (protocol: string): void
+  unhandle (protocol: string): void
 
   /**
    * Return the protocol->path mappings supported by this server
@@ -462,25 +501,23 @@ export interface HTTP {
 
   /**
    * Returns true if there is a handler registered for the incoming Request or
-   * WebSocket
+   * WebSocket.
+   *
+   * Note - the `.url` property must be set on the WebSocket for this to work.
+   * Not all server-side WebSocket frameworks do this out of the box so the
+   * caller may have to add the property.
    */
-  canHandleHTTP (req: { url?: string }): boolean
-
-  /**
-   * Returns true if there is a handler registered for the incoming Request or
-   * WebSocket
-   */
-  canHandleWebSocket (req: { url?: string }): boolean
+  canHandle (req: Request | IncomingMessage | WebSocket): boolean
 
   /**
    * Handle an incoming HTTP request
    */
-  handleHTTP: HTTPRequestHandler
+  onRequest: HTTPRequestHandler
 
   /**
    * Handle an incoming WebSocket
    */
-  handleWebSocket: WebSocketHandler
+  onWebSocket: WebSocketHandler
 }
 
 /**

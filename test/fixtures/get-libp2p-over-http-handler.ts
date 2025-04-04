@@ -8,6 +8,13 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 
 export interface Libp2pOverHTTPHandler {
   /**
+   * Returns `true` if the libp2p HTTP service will handle this WebSocket (e.g.
+   * it is for protocol map published at the `/.well-known` location or there is
+   * a protocol handler registered for this path).
+   */
+  (ws: WebSocket): boolean
+
+  /**
    * Returns `true` if the libp2p HTTP service will handle this request (e.g. it
    * is for protocol map published at the `/.well-known` location or there is a
    * protocol handler registered for this path).
@@ -15,18 +22,8 @@ export interface Libp2pOverHTTPHandler {
   (req: IncomingMessage, res: ServerResponse): boolean
 }
 
-export interface Libp2pOverWSHandler {
-  /**
-   * Returns `true` if the libp2p HTTP service will handle this request (e.g. it
-   * is for protocol map published at the `/.well-known` location or there is a
-   * protocol handler registered for this path).
-   */
-  (ws: WebSocket): boolean
-}
-
 export interface Libp2pOverHttpHandlerResults {
-  http: Libp2pOverHTTPHandler
-  ws: Libp2pOverWSHandler
+  handler: Libp2pOverHTTPHandler
   libp2p: Libp2p<{ http: HTTP, pingHTTP: PingHTTP }>
 }
 
@@ -41,26 +38,29 @@ export async function getLibp2pOverHttpHandler (): Promise<Libp2pOverHttpHandler
     }
   })
 
-  const httpHandler = (req: IncomingMessage, res: ServerResponse): boolean => {
-    if (libp2p.services.http.canHandleHTTP(req)) {
-      libp2p.services.http.handleHTTP(incomingMessageToRequest(req))
-        .then(result => {
-          writeResponse(result, res)
-        })
-        .catch(err => {
-          res.writeHead(500, err.toString())
-          res.end()
-        })
-      return true
-    }
+  const handler = (...args: any[]): boolean => {
+    if (args.length === 1) {
+      const ws: WebSocket = args[0]
 
-    return false
-  }
+      if (libp2p.services.http.canHandle(ws)) {
+        libp2p.services.http.onWebSocket(ws)
+        return true
+      }
+    } else if (args.length === 2) {
+      const req: IncomingMessage = args[0]
+      const res: ServerResponse = args[1]
 
-  const wsHandler = (ws: WebSocket): boolean => {
-    if (libp2p.services.http.canHandleWebSocket(ws)) {
-      libp2p.services.http.handleWebSocket(ws)
-      return true
+      if (libp2p.services.http.canHandle(req)) {
+        libp2p.services.http.onRequest(incomingMessageToRequest(req))
+          .then(result => {
+            writeResponse(result, res)
+          })
+          .catch(err => {
+            res.writeHead(500, err.toString())
+            res.end()
+          })
+        return true
+      }
     }
 
     return false
@@ -68,7 +68,6 @@ export async function getLibp2pOverHttpHandler (): Promise<Libp2pOverHttpHandler
 
   return {
     libp2p,
-    http: httpHandler,
-    ws: wsHandler
+    handler
   }
 }

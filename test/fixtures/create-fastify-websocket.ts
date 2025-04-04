@@ -1,10 +1,10 @@
 import fastifyWebSocket from '@fastify/websocket'
 import { fastify } from 'fastify'
 import { toWebSocket } from './to-websocket.js'
-import type { Libp2pOverHTTPHandler, Libp2pOverWSHandler } from './get-libp2p-over-http-handler.js'
+import type { Libp2pOverHTTPHandler } from './get-libp2p-over-http-handler.js'
 import type { Server } from 'node:http'
 
-export async function createFastifyWebSocket (server: Server, httpHandler?: Libp2pOverHTTPHandler, wsHandler?: Libp2pOverWSHandler): Promise<Server> {
+export async function createFastifyWebSocket (server: Server, handler?: Libp2pOverHTTPHandler): Promise<Server> {
   const app = fastify({
     serverFactory: (app, opts) => {
       server.addListener('request', (req, res) => {
@@ -13,7 +13,7 @@ export async function createFastifyWebSocket (server: Server, httpHandler?: Libp
         res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
         res.setHeader('Access-Control-Allow-Headers', '*')
 
-        if (httpHandler?.(req, res) !== true) {
+        if (handler?.(req, res) !== true) {
           app(req, res)
         }
       })
@@ -29,7 +29,7 @@ export async function createFastifyWebSocket (server: Server, httpHandler?: Libp
       })
     })
     fastify.get('/*', { websocket: true }, (socket, req) => {
-      if (wsHandler?.(toWebSocket(socket, req)) === true) {
+      if (handler?.(toWebSocket(socket, req)) === true) {
         return
       }
 

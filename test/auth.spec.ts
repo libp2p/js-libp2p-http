@@ -1,10 +1,6 @@
 /* eslint-disable max-nested-callbacks */
 import http from 'node:http'
 import { generateKeyPair } from '@libp2p/crypto/keys'
-import './websockets.spec.js'
-import './fetch.spec.js'
-import './ping.spec.js'
-import './websocket/message.spec.js'
 import { peerIdFromPrivateKey } from '@libp2p/peer-id'
 import { expect } from 'aegir/chai'
 import pDefer from 'p-defer'

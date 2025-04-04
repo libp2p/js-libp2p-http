@@ -86,13 +86,16 @@ export class ClientAuth {
 
   public bearerAuthHeaderWithPeer (hostname: string): { 'authorization': string, peer: PeerId, agent: CookieAgent, jar: CookieJar } | undefined {
     const token = this.tokens.get(hostname)
+
     if (token == null) {
       return undefined
     }
+
     if (Date.now() - token.creationTime.getTime() > this.tokenTTL) {
       this.tokens.delete(hostname)
       return undefined
     }
+
     return {
       authorization: `${PeerIDAuthScheme} bearer="${token.bearer}"`,
       peer: token.peer,

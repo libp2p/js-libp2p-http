@@ -5,6 +5,7 @@ import { uriToMultiaddr } from '@multiformats/uri-to-multiaddr'
 import { queuelessPushable } from 'it-queueless-pushable'
 import itToBrowserReadableStream from 'it-to-browser-readablestream'
 import { fromString as uint8arrayFromString } from 'uint8arrays/from-string'
+import { DEFAULT_HOST } from './constants.js'
 import type { HeaderInfo } from './index.js'
 import type { PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
@@ -34,15 +35,23 @@ export function streamToRequest (info: HeaderInfo, stream: Stream): Request {
     headers: info.headers
   }
 
-  if (info.method !== 'GET' && info.method !== 'HEAD') {
-    init.body = itToBrowserReadableStream<Uint8Array>(takeBytes(stream.source, info.headers.get('content-length')))
+  if (info.upgrade) {
+    init.method = 'UPGRADE'
+  }
+
+  if (init.method !== 'GET' && init.method !== 'HEAD') {
+    let source: AsyncGenerator<any> = stream.source
+
+    if (!info.upgrade) {
+      source = takeBytes(stream.source, info.headers.get('content-length'))
+    }
+
+    init.body = itToBrowserReadableStream<Uint8Array>(source)
     // @ts-expect-error this is required by NodeJS despite being the only reasonable option https://fetch.spec.whatwg.org/#requestinit
     init.duplex = 'half'
   }
 
-  const req = new Request(`http://${info.headers.get('host') ?? 'host'}${info.url}`, init)
-
-  return req
+  return new Request(`http://${info.headers.get('host') ?? 'host'}${info.url}`, init)
 }
 
 export async function responseToStream (res: Response, stream: Stream): Promise<void> {
@@ -134,7 +143,7 @@ export function toMultiaddrs (peer: PeerId | Multiaddr | Multiaddr[], suffix?: s
   return mas
 }
 
-function writeHeaders (headers: Headers): string[] {
+export function writeHeaders (headers: Headers): string[] {
   const output = []
 
   if (headers.get('Connection') == null) {
@@ -235,4 +244,24 @@ export function toResource (resource: string | URL | Multiaddr | Multiaddr[]): U
   }
 
   return resource
+}
+
+export function getHost (init?: HeadersInit): string {
+  if (init == null) {
+    return DEFAULT_HOST
+  }
+
+  if (init instanceof Headers) {
+    return init.get('host') ?? DEFAULT_HOST
+  }
+
+  let entries: Array<[string, string]>
+
+  if (Array.isArray(init)) {
+    entries = init
+  } else {
+    entries = Object.entries(init)
+  }
+
+  return entries.find(([key]) => key.toLowerCase() === 'host')?.[1] ?? DEFAULT_HOST
 }
