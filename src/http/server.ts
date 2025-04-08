@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { HTTPParser } from '@achingbrain/http-parser-js'
-import { fromString as uint8arrayFromString } from 'uint8arrays/from-string'
+import { NOT_IMPLEMENTED_ERROR } from '../utils.js'
 import { IncomingMessage as IncomingMessageClass } from './incoming-message.js'
 import { ServerResponse as ServerResponseClass } from './server-response.js'
 import type { ServerOptions, ServerResponse, IncomingMessage } from 'node:http'
@@ -15,6 +15,7 @@ export class HTTPServer <
   Response extends typeof ServerResponse<InstanceType<Request>> = typeof ServerResponse
 > extends EventEmitter {
   public maxHeadersCount: number | null
+  public maxHeaderSize: number | null
   public maxRequestsPerSocket: number | null
   public timeout: number
   public headersTimeout: number
@@ -34,6 +35,7 @@ export class HTTPServer <
     this.headersTimeout = 120_000
     this.keepAliveTimeout = options.keepAliveTimeout ?? 0
     this.requestTimeout = options.requestTimeout ?? 120_000
+    this.maxHeaderSize = options.maxHeaderSize ?? HTTPParser.maxHeaderSize
     this.maxConnections = 0
     this.connections = 0
     this._listening = false
@@ -43,15 +45,16 @@ export class HTTPServer <
   }
 
   private _handleConnection (socket: Socket): void {
-    const parser = new HTTPParser('REQUEST')
     let req: IncomingMessage | undefined
 
+    const parser = new HTTPParser('REQUEST')
+    parser.maxHeaderSize = this.maxHeaderSize ?? HTTPParser.maxHeaderSize
     parser[HTTPParser.kOnHeadersComplete] = (info) => {
       const headers = new Headers()
 
       // set incoming headers
       for (let i = 0; i < info.headers.length; i += 2) {
-        headers.set(info.headers[i].toLowerCase(), info.headers[i + 1])
+        headers.append(info.headers[i].toLowerCase(), info.headers[i + 1])
       }
 
       req = new IncomingMessageClass(socket, {
@@ -64,7 +67,7 @@ export class HTTPServer <
         const listeners = this.listenerCount('upgrade')
 
         if (listeners === 0) {
-          socket.write(uint8arrayFromString('HTTP/1.1 501 Not Implemented\r\n\r\n'))
+          socket.write(NOT_IMPLEMENTED_ERROR)
           // socket.end()
           return
         } else {

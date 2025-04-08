@@ -1,18 +1,18 @@
-import { isPeerId } from '@libp2p/interface'
-import { isMultiaddr, multiaddr } from '@multiformats/multiaddr'
+import { InvalidParametersError, isPeerId } from '@libp2p/interface'
+import { peerIdFromString } from '@libp2p/peer-id'
+import { fromStringTuples, isMultiaddr, multiaddr } from '@multiformats/multiaddr'
 import { multiaddrToUri } from '@multiformats/multiaddr-to-uri'
 import { uriToMultiaddr } from '@multiformats/uri-to-multiaddr'
 import { queuelessPushable } from 'it-queueless-pushable'
 import itToBrowserReadableStream from 'it-to-browser-readablestream'
+import { base36 } from 'multiformats/bases/base36'
 import { fromString as uint8arrayFromString } from 'uint8arrays/from-string'
-import { DEFAULT_HOST } from './constants.js'
-import type { HeaderInfo } from './index.js'
+import { DNS_CODECS, HTTP_CODEC, HTTP_PATH_CODEC } from './constants.js'
+import type { FetchInit, HeaderInfo, RequestProcessor } from './index.js'
 import type { PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Readable } from 'node:stream'
 import type { Uint8ArrayList } from 'uint8arraylist'
-
-const HTTP_CODEC = 0x01e0
 
 /**
  * Normalizes byte-like input to a `Uint8Array`
@@ -112,6 +112,13 @@ export const BAD_REQUEST = uint8arrayFromString([
 
 export const INTERNAL_SERVER_ERROR = uint8arrayFromString([
   'HTTP/1.1 500 Internal Server Error',
+  'Connection: close',
+  '',
+  ''
+].join('\r\n'))
+
+export const NOT_IMPLEMENTED_ERROR = uint8arrayFromString([
+  'HTTP/1.1 501 Not Implemented',
   'Connection: close',
   '',
   ''
@@ -246,22 +253,133 @@ export function toResource (resource: string | URL | Multiaddr | Multiaddr[]): U
   return resource
 }
 
-export function getHost (init?: HeadersInit): string {
-  if (init == null) {
-    return DEFAULT_HOST
+export function getHeaders (init: RequestInit = {}): Headers {
+  if (init.headers instanceof Headers) {
+    return init.headers
   }
 
-  if (init instanceof Headers) {
-    return init.get('host') ?? DEFAULT_HOST
+  init.headers = new Headers(init.headers)
+
+  return init.headers
+}
+
+export function getHeader (header: string, headers: HeadersInit = {}): string | undefined {
+  if (headers instanceof Headers) {
+    return headers.get(header) ?? undefined
   }
 
-  let entries: Array<[string, string]>
+  if (Array.isArray(headers)) {
+    return headers.find(([key, value]) => {
+      if (key === header) {
+        return value
+      }
 
-  if (Array.isArray(init)) {
-    entries = init
-  } else {
-    entries = Object.entries(init)
+      return undefined
+    })?.[1]
   }
 
-  return entries.find(([key]) => key.toLowerCase() === 'host')?.[1] ?? DEFAULT_HOST
+  return headers[header]
+}
+
+function isValidHost (host?: string): host is string {
+  return host != null && host !== ''
+}
+
+export function getHost (addresses: URL | Multiaddr[], init: RequestInit): string {
+  let host: string | undefined
+
+  if (addresses instanceof URL) {
+    host = addresses.hostname
+  }
+
+  if (!isValidHost(host)) {
+    const headers = getHeaders(init)
+    host = headers.get('host') ?? undefined
+  }
+
+  // try to extract domain from DNS addresses
+  if (!isValidHost(host) && Array.isArray(addresses)) {
+    for (const address of addresses) {
+      const stringTuples = address.stringTuples()
+      const filtered = stringTuples.filter(([key]) => DNS_CODECS.includes(key))?.[0]?.[1]
+
+      if (filtered != null) {
+        host = filtered
+        break
+      }
+    }
+  }
+
+  // try to use remote PeerId as domain
+  if (!isValidHost(host) && Array.isArray(addresses)) {
+    for (const address of addresses) {
+      const peerStr = address.getPeerId()
+
+      if (peerStr != null) {
+        const peerId = peerIdFromString(peerStr)
+        // host has to be case-insensitive
+        host = peerId.toCID().toString(base36)
+        break
+      }
+    }
+  }
+
+  if (isValidHost(host)) {
+    return host
+  }
+
+  throw new InvalidParametersError('Could not determine request host name - a request must have a host header, be made to a DNS-based multiaddr or an http(s) URL')
+}
+
+export function getCacheKey (resource: URL | Multiaddr[], init: RequestInit): string {
+  let prefix = ''
+
+  if (Array.isArray(resource)) {
+    const peer = resource.map(ma => ma.getPeerId())
+      .filter(Boolean)
+      .pop()
+
+    if (peer != null) {
+      prefix = `${peer}-`
+    }
+  }
+
+  return `${prefix}${getHost(resource, init)}`
+}
+
+export async function prepareAndSendRequest (resource: URL | Multiaddr[], init: RequestInit, processors: RequestProcessor[], sendRequest: (resource: URL | Multiaddr[], init: FetchInit) => Promise<Response>): Promise<Response> {
+  for (const processor of processors) {
+    await processor.prepareRequest?.(resource, init)
+  }
+
+  return sendRequest(resource, init)
+}
+
+export async function processResponse (resource: URL | Multiaddr[], init: RequestInit, processors: RequestProcessor[], response: Response): Promise<Response> {
+  for (const proc of processors) {
+    await proc.processResponse?.(resource, init, response)
+  }
+
+  return response
+}
+
+export function stripHTTPPath (addresses: Multiaddr[]): { httpPath: string, addresses: Multiaddr[] } {
+  // strip http-path tuple but record the value if set
+  let httpPath = '/'
+  addresses = addresses.map(ma => {
+    return fromStringTuples(
+      ma.stringTuples().filter(t => {
+        if (t[0] === HTTP_PATH_CODEC && t[1] != null) {
+          httpPath = `/${t[1]}`
+        }
+
+        return t[0] !== HTTP_PATH_CODEC
+      })
+    )
+  })
+
+  return {
+    httpPath,
+    addresses
+  }
 }

@@ -1,3 +1,4 @@
+import { Response } from './fetch/response.js'
 import { webSocketHandler } from './websocket-handler.js'
 import type { HTTPRequestHandler } from './index.js'
 import type { HTTPRegistrar } from './registrar.js'

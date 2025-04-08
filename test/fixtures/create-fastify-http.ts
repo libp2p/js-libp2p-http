@@ -1,3 +1,4 @@
+import cookies from '@fastify/cookie'
 import { fastify } from 'fastify'
 import type { Libp2pOverHTTPHandler } from './get-libp2p-over-http-handler.js'
 import type { FastifyRequest } from 'fastify'
@@ -21,6 +22,8 @@ export async function createFastifyHTTP (server: Server, handler?: Libp2pOverHTT
     }
   })
 
+  await app.register(cookies)
+
   // fastify only supports 'application/json' and 'text/plain' by default
   app.addContentTypeParser('*', async (req: FastifyRequest, payload: IncomingMessage) => {
     return payload
@@ -42,6 +45,18 @@ export async function createFastifyHTTP (server: Server, handler?: Libp2pOverHTT
     req.raw.on('error', (err) => {
       reply.raw.destroy(err)
     })
+  })
+  app.get('/set-cookies', async (req, res) => {
+    await res.setCookie('cookie-1', 'value-1', {
+      domain: req.headers.host,
+      maxAge: 3600
+    })
+    await res.setCookie('cookie-2', 'value-2')
+    res.statusCode = 201
+    await res.send()
+  })
+  app.get('/get-cookies', async (req, res) => {
+    await res.send(JSON.stringify(Object.entries(req.cookies).map(([key, value]) => `${key}=${value}`)))
   })
 
   await app.ready()

@@ -3,8 +3,8 @@ import { multiaddr, type Multiaddr } from '@multiformats/multiaddr'
 import { expect } from 'aegir/chai'
 import { createServer } from '../src/http/index.js'
 import { nodeServer } from '../src/servers/node.js'
+import { createHttp } from './fixtures/create-http.js'
 import { getClient, getListener } from './fixtures/get-libp2p.js'
-import { getServer } from './fixtures/get-server.js'
 import type { HTTP } from '../src/index.js'
 import type { Libp2p } from 'libp2p'
 
@@ -19,7 +19,7 @@ let listener: Libp2p<{ http: HTTP }>
 const tests: Test[] = [{
   name: 'in-process server',
   startServer: async () => {
-    const server = getServer(createServer)
+    const server = createHttp(createServer())
     listener = await getListener(nodeServer(server))
 
     return listener.getMultiaddrs()

@@ -1,4 +1,5 @@
 import { WEBSOCKET_HANDLER } from './constants.js'
+import { Response } from './fetch/response.js'
 import { getServerUpgradeHeaders } from './websocket/utils.js'
 import { RequestWebSocket } from './websocket/websocket.js'
 import type { HTTPRequestHandler, WebSocketHandler } from './index.js'

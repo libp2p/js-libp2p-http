@@ -101,30 +101,29 @@ function getHeader (headers: Headers | Record<string, string | string[] | undefi
 /**
  * Implements the WebSocket handshake from the client's perspective
  */
-export async function * performClientUpgrade (url: URL, protocols: string[] = []): AsyncGenerator<Uint8Array> {
+export async function * performClientUpgrade (url: URL, protocols: string[] = [], headers: Headers): AsyncGenerator<Uint8Array> {
   const webSocketKey = base64pad.encode(
     crypto.getRandomValues(new Uint8Array(16))
   ).substring(1)
 
-  const headers = [
-    `GET ${url.pathname ?? '/'} HTTP/1.1`,
-    `Host: ${url.hostname}`,
-    'Connection: upgrade',
-    'Upgrade: websocket',
-    'Pragma: no-cache',
-    'Cache-Control: no-cache',
-    'Sec-WebSocket-Version: 13',
-    `Sec-WebSocket-Key: ${webSocketKey}`
-  ]
+  headers.set('host', url.hostname)
+  headers.set('connection', 'upgrade')
+  headers.set('upgrade', 'websocket')
+  headers.set('pragma', 'no-cache')
+  headers.set('cache-control', 'no-cache')
+  headers.set('sec-websocket-version', '13')
+  headers.set('sec-websocket-key', webSocketKey)
 
   if (protocols.length > 0) {
-    headers.push(`Sec-WebSocket-Protocol: ${protocols?.join(', ')}`)
+    headers.set('sec-websocket-protocol', protocols.join(', '))
   }
 
-  headers.push('', '')
-
-  const req = uint8ArrayFromString(headers.join('\r\n'))
-  yield req
+  yield uint8ArrayFromString([
+    `GET ${url.pathname ?? '/'} HTTP/1.1`,
+    ...[...headers.entries()].map(([key, value]) => `${key}: ${value}`),
+    '',
+    ''
+  ].join('\r\n'))
 }
 
 export async function getServerUpgradeHeaders (headers: Headers | Record<string, string | string[] | undefined>): Promise<Headers> {

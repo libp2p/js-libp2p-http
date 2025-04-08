@@ -1,4 +1,5 @@
 import { HTTPParser } from '@achingbrain/http-parser-js'
+import { Response } from './response.js'
 import type { SendRequestInit } from './index.js'
 import type { Stream } from '@libp2p/interface'
 import type { ByteStream } from 'it-byte-stream'
@@ -10,13 +11,14 @@ export async function readResponse (bytes: ByteStream<Stream>, resource: URL, in
     let headersComplete = false
 
     const parser = new HTTPParser('RESPONSE')
+    parser.maxHeaderSize = init.maxHeaderSize ?? HTTPParser.maxHeaderSize
     parser[HTTPParser.kOnHeadersComplete] = (info) => {
       init.log('response headers complete')
       headersComplete = true
-      const headers: Array<[string, string]> = []
+      const headers = new Headers()
 
       for (let i = 0; i < info.headers.length; i += 2) {
-        headers.push([info.headers[i], info.headers[i + 1]])
+        headers.append(info.headers[i], info.headers[i + 1])
       }
 
       const response = new Response(body.readable, {

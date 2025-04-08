@@ -5,10 +5,19 @@ import type { ComponentLogger, Logger, Stream } from '@libp2p/interface'
 
 export interface FetchInit extends RequestInit {
   logger: ComponentLogger
+
+  /**
+   * The maximum number of bytes that will be parsed as headers, defaults to
+   * 80KB
+   *
+   * @default 81_920
+   */
+  maxHeaderSize?: number
 }
 
 export interface SendRequestInit extends RequestInit {
   log: Logger
+  maxHeaderSize?: number
 }
 
 export async function fetch (stream: Stream, resource: string | URL, init: FetchInit): Promise<Response> {

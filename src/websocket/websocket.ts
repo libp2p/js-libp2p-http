@@ -3,14 +3,14 @@ import { isPromise } from '@libp2p/utils/is-promise'
 import { byteStream, type ByteStream } from 'it-byte-stream'
 import { Uint8ArrayList } from 'uint8arraylist'
 import { PROTOCOL } from '../constants.js'
-import { getHost } from '../utils.js'
+import { getHeaders } from '../utils.js'
 import { ErrorEvent } from './events.js'
 import { encodeMessage, decodeMessage, CLOSE_MESSAGES } from './message.js'
 import { performClientUpgrade, performServerUpgrade, readResponse, toBytes } from './utils.js'
 import type { CloseListener, ErrorListener, MessageListener, OpenListener, WebSocketEvents } from './index.js'
 import type { MESSAGE_TYPE } from './message.js'
-import type { HeaderInfo } from '../index.js'
-import type { Stream, AbortOptions } from '@libp2p/interface'
+import type { HeaderInfo, WebSocketInit } from '../index.js'
+import type { Stream } from '@libp2p/interface'
 import type { ConnectionManager } from '@libp2p/interface-internal'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { IncomingMessage } from 'node:http'
@@ -20,16 +20,9 @@ const DATA_MESSAGES: MESSAGE_TYPE[] = ['BINARY', 'TEXT', 'CONTINUATION']
 const MAX_MESSAGE_SIZE = 10_485_760
 const DEFAULT_HOST = 'example.com'
 
-export interface WebSocketInit extends AbortOptions {
+export interface AbstractWebSocketInit extends WebSocketInit {
   protocols?: string[]
   isClient?: boolean
-
-  /**
-   * The maximum message size to be sent or received over the socket in bytes
-   *
-   * @default 10_485_760
-   */
-  maxMessageSize?: number
 }
 
 export abstract class AbstractWebSocket extends TypedEventEmitter<WebSocketEvents> {
@@ -57,7 +50,7 @@ export abstract class AbstractWebSocket extends TypedEventEmitter<WebSocketEvent
   protected readonly _url?: URL
   protected readonly closeController: AbortController
 
-  constructor (url: URL, init: WebSocketInit = {}) {
+  constructor (url: URL, init: AbstractWebSocketInit = {}) {
     super()
 
     this.readyState = this.CONNECTING
@@ -229,7 +222,7 @@ export abstract class AbstractWebSocket extends TypedEventEmitter<WebSocketEvent
 export class ServerWebSocket extends AbstractWebSocket {
   private readonly duplex: Duplex
 
-  constructor (request: IncomingMessage, duplex: Duplex, init: WebSocketInit = {}) {
+  constructor (request: IncomingMessage, duplex: Duplex, init: AbstractWebSocketInit = {}) {
     super(new URL(`http://${request.headers.host ?? DEFAULT_HOST}${request.url}`), {
       ...init,
       isClient: false
@@ -274,7 +267,7 @@ export class ServerWebSocket extends AbstractWebSocket {
 export class StreamWebSocket extends AbstractWebSocket {
   private readonly bytes: ByteStream<Stream>
 
-  constructor (info: HeaderInfo, stream: Stream, init?: WebSocketInit) {
+  constructor (info: HeaderInfo, stream: Stream, init?: AbstractWebSocketInit) {
     super(new URL(`http://${info.headers.get('host') ?? DEFAULT_HOST}${info.url}`), {
       ...init,
       isClient: false
@@ -338,8 +331,8 @@ export class RequestWebSocket extends AbstractWebSocket {
   private readonly writer: WritableStreamDefaultWriter
   private readonly writable: WritableStream
 
-  constructor (request: Request, writable: WritableStream, init?: WebSocketInit) {
-    super(new URL(`http://${getHost(request.headers)}${request.url}`), {
+  constructor (request: Request, writable: WritableStream, init: AbstractWebSocketInit = {}) {
+    super(new URL(request.url), {
       ...init,
       isClient: false
     })
@@ -406,7 +399,7 @@ export class RequestWebSocket extends AbstractWebSocket {
 export class WebSocket extends AbstractWebSocket {
   private bytes?: ByteStream<Stream>
 
-  constructor (mas: Multiaddr[], url: URL, connectionManager: ConnectionManager, init: WebSocketInit = {}) {
+  constructor (mas: Multiaddr[], url: URL, connectionManager: ConnectionManager, init: AbstractWebSocketInit = {}) {
     super(url, {
       ...init,
       isClient: true
@@ -418,7 +411,7 @@ export class WebSocket extends AbstractWebSocket {
         const stream = await connection.newStream(PROTOCOL, init)
         this.bytes = byteStream(stream)
 
-        for await (const buf of performClientUpgrade(url, init.protocols)) {
+        for await (const buf of performClientUpgrade(url, init.protocols, getHeaders(init))) {
           await this.bytes.write(buf)
         }
 

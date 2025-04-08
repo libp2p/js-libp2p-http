@@ -1,4 +1,5 @@
 import { fromString as uint8arrayFromString } from 'uint8arrays/from-string'
+import { writeHeaders } from '../utils.js'
 import { blobBody } from './body/blob.js'
 import { bytesBody } from './body/bytes.js'
 import { formDataBody } from './body/form-data.js'
@@ -77,20 +78,6 @@ function normalizeContent (body: BodyInit, headers: Headers): ReadableStream {
   }
 
   throw new Error('Unsupported body type')
-}
-
-function writeHeaders (headers: Headers): string[] {
-  const output = []
-
-  if (headers.get('Connection') == null) {
-    headers.set('Connection', 'close')
-  }
-
-  for (const [key, value] of headers.entries()) {
-    output.push(`${key}: ${value}`)
-  }
-
-  return output
 }
 
 function isBytes (obj?: any): obj is Uint8Array {

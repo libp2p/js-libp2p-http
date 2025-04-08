@@ -9,6 +9,21 @@ export function createHttp (server: Server, handler?: Libp2pOverHTTPHandler): Se
       return
     }
 
+    if (req.url === '/set-cookies') {
+      res.appendHeader('set-cookie', `cookie-1=value-1; Domain=${req.headers.host}; Max-Age=3600`)
+      res.appendHeader('set-cookie', 'cookie-2=value-2')
+      res.writeHead(201)
+      res.end()
+
+      return
+    }
+
+    if (req.url === '/get-cookies') {
+      res.end(JSON.stringify(req.headers.cookie?.split(';').map(s => s.trim()) ?? []))
+
+      return
+    }
+
     res.end('Hello World!')
   }
 

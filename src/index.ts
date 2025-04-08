@@ -363,31 +363,44 @@ export interface WebSocketInit extends AbortOptions {
   maxMessageSize?: number
 
   /**
-   * If true, perform PeerId auth for the remote server before making the
-   * request.
-   *
-   * @see https://github.com/libp2p/specs/blob/master/http/peer-id-auth.md
-   *
-   * @default false
-   */
-  authenticate?: boolean
-
-  /**
    * Headers to send with the initial upgrade request
    */
   headers?: HeadersInit
+
+  /**
+   * A list of request processors that can augment requests - if specified will
+   * override any processors passed to the `http` service
+   */
+  processors?: RequestProcessor[]
+
+  /**
+   * If true, cookies will not be used for this request
+   *
+   * @default false
+   */
+  ignoreCookies?: boolean
 }
 
 export interface FetchInit extends RequestInit {
   /**
-   * If true, perform PeerId auth for the remote server before making the
-   * request.
-   *
-   * @see https://github.com/libp2p/specs/blob/master/http/peer-id-auth.md
+   * A list of request processors that can augment requests - if specified will
+   * override any processors passed to the `http` service
+   */
+  processors?: RequestProcessor[]
+
+  /**
+   * If true, cookies will not be used for this request
    *
    * @default false
    */
-  authenticate?: boolean
+  ignoreCookies?: boolean
+
+  /**
+   * The maximum number of bytes that will be parsed as response headers
+   *
+   * @default 81_920
+   */
+  maxHeaderSize?: number
 }
 
 export interface HTTPRequestHandler {
@@ -440,7 +453,7 @@ export interface HTTP {
    * URLs can start with the `multiaddr:` scheme if the global URL class in the
    * runtime environment supports it.
    */
-  fetch(resource: string | URL | Multiaddr | Multiaddr[], init?: RequestInit): Promise<Response>
+  fetch(resource: string | URL | Multiaddr | Multiaddr[], init?: FetchInit): Promise<Response>
 
   /**
    * Open a WebSocket connection to an HTTP server over libp2p.
@@ -546,6 +559,16 @@ export interface Endpoint {
 }
 
 /**
+ * Request/response middleware that allows augmenting the request/response with
+ * additional fields or headers.
+ */
+export interface RequestProcessor {
+  prepareRequest?(resource: URL | Multiaddr[], init: FetchInit): void | Promise<void>
+
+  processResponse?(resource: URL | Multiaddr[], init: FetchInit, response: Response): void | Promise<void>
+}
+
+/**
  * Options to configure the HTTP service.
  *
  * Only required if you want to specify a custom fetch implementation or used to
@@ -556,6 +579,30 @@ export interface HTTPInit {
    * A server that will receive incoming requests
    */
   server?: Endpoint
+
+  /**
+   * How long in ms an auth token for a server will be valid for, defaults to
+   * one hour
+   *
+   * @default 360_000
+   */
+  authTokenTTL?: number
+
+  /**
+   * A list of request processors that can augment requests
+   */
+  processors?: RequestProcessor[]
+
+  /**
+   * How often to evict stale cookies from the cache in ms.
+   *
+   * Nb. cookies are checked for expiry before sending, this setting just
+   * prevents persisting cookies indefinitely for servers that are contacted
+   * infrequently.
+   *
+   * @default 60_000
+   */
+  cookieExpiryCheckInterval?: number
 }
 
 /**

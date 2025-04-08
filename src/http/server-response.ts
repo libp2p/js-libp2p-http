@@ -108,12 +108,15 @@ export class ServerResponse<Request extends IncomingMessage = IncomingMessage> e
   }
 
   _write (chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
-    this.flushHeaders()
-    this.socket?.write(chunk, encoding, callback)
+    this.flushHeaders(() => {
+      this.socket?.write(chunk, encoding, callback)
+    })
   }
 
   _final (callback: (error?: Error | null) => void): void {
-    this.socket?.end(callback)
+    this.flushHeaders(() => {
+      this.socket?.end(callback)
+    })
   }
 
   _destroy (error: Error | null, callback: (error?: Error | null) => void): void {
@@ -197,8 +200,9 @@ export class ServerResponse<Request extends IncomingMessage = IncomingMessage> e
 
   }
 
-  flushHeaders (): void {
+  flushHeaders (callback?: () => void): void {
     if (this.sentHeaders) {
+      callback?.()
       return
     }
 
@@ -211,7 +215,7 @@ export class ServerResponse<Request extends IncomingMessage = IncomingMessage> e
       ''
     ]
 
-    this.socket?.write(uint8arrayFromString(res.join('\r\n')))
+    this.socket?.write(uint8arrayFromString(res.join('\r\n')), callback)
   }
 
   writeContinue (callback?: () => void): void {
@@ -255,6 +259,8 @@ export class ServerResponse<Request extends IncomingMessage = IncomingMessage> e
     if (STATUS_CODES[statusCode] == null) {
       throw new InvalidParametersError(`Unknown status code ${statusCode}`)
     }
+
+    this.statusCode = statusCode
 
     this.flushHeaders()
 
@@ -300,7 +306,9 @@ function writeHeaders (headers: Record<string, number | string | Array<number | 
     }
 
     if (Array.isArray(value)) {
-      output.push(`${key}: ${value.join(', ')}`)
+      value.forEach(value => {
+        output.push(`${key}: ${value}`)
+      })
     } else {
       output.push(`${key}: ${value}`)
     }
