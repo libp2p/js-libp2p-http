@@ -9,8 +9,8 @@ import { encodeMessage, decodeMessage, CLOSE_MESSAGES } from './message.js'
 import { performClientUpgrade, performServerUpgrade, readResponse, toBytes } from './utils.js'
 import type { CloseListener, ErrorListener, MessageListener, OpenListener, WebSocketEvents } from './index.js'
 import type { MESSAGE_TYPE } from './message.js'
-import type { HeaderInfo, WebSocketInit } from '../index.js'
-import type { Stream } from '@libp2p/interface'
+import type { HeaderInfo, RequestMiddleware, RequestOptions } from '../index.js'
+import type { AbortOptions, Stream } from '@libp2p/interface'
 import type { ConnectionManager } from '@libp2p/interface-internal'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { IncomingMessage } from 'node:http'
@@ -20,9 +20,12 @@ const DATA_MESSAGES: MESSAGE_TYPE[] = ['BINARY', 'TEXT', 'CONTINUATION']
 const MAX_MESSAGE_SIZE = 10_485_760
 const DEFAULT_HOST = 'example.com'
 
-export interface AbstractWebSocketInit extends WebSocketInit {
+export interface AbstractWebSocketInit extends AbortOptions {
   protocols?: string[]
   isClient?: boolean
+  maxMessageSize?: number
+  headers?: HeadersInit
+  ignoreCookies?: boolean
 }
 
 export abstract class AbstractWebSocket extends TypedEventEmitter<WebSocketEvents> {
@@ -396,10 +399,15 @@ export class RequestWebSocket extends AbstractWebSocket {
   }
 }
 
+export interface WebSocketInit extends RequestOptions {
+  middleware: RequestMiddleware[]
+  protocols?: string[]
+}
+
 export class WebSocket extends AbstractWebSocket {
   private bytes?: ByteStream<Stream>
 
-  constructor (mas: Multiaddr[], url: URL, connectionManager: ConnectionManager, init: AbstractWebSocketInit = {}) {
+  constructor (mas: Multiaddr[], url: URL, connectionManager: ConnectionManager, init: WebSocketInit) {
     super(url, {
       ...init,
       isClient: true
@@ -411,6 +419,10 @@ export class WebSocket extends AbstractWebSocket {
         const stream = await connection.newStream(PROTOCOL, init)
         this.bytes = byteStream(stream)
 
+        for (const middleware of init.middleware) {
+          await middleware.prepareRequest?.(mas, init)
+        }
+
         for await (const buf of performClientUpgrade(url, init.protocols, getHeaders(init))) {
           await this.bytes.write(buf)
         }
@@ -419,6 +431,10 @@ export class WebSocket extends AbstractWebSocket {
 
         if (res.status !== 101) {
           throw new Error('Invalid WebSocket handshake')
+        }
+
+        for (const middleware of init.middleware) {
+          await middleware.processResponse?.(mas, init, res)
         }
 
         // if a protocol was selected by the server, expose it

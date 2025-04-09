@@ -8,7 +8,7 @@ import itToBrowserReadableStream from 'it-to-browser-readablestream'
 import { base36 } from 'multiformats/bases/base36'
 import { fromString as uint8arrayFromString } from 'uint8arrays/from-string'
 import { DNS_CODECS, HTTP_CODEC, HTTP_PATH_CODEC } from './constants.js'
-import type { FetchInit, HeaderInfo, RequestProcessor } from './index.js'
+import type { HeaderInfo, RequestOptions } from './index.js'
 import type { PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Readable } from 'node:stream'
@@ -285,7 +285,7 @@ function isValidHost (host?: string): host is string {
   return host != null && host !== ''
 }
 
-export function getHost (addresses: URL | Multiaddr[], init: RequestInit): string {
+export function getHost (addresses: URL | Multiaddr[], headers: Headers): string {
   let host: string | undefined
 
   if (addresses instanceof URL) {
@@ -293,7 +293,6 @@ export function getHost (addresses: URL | Multiaddr[], init: RequestInit): strin
   }
 
   if (!isValidHost(host)) {
-    const headers = getHeaders(init)
     host = headers.get('host') ?? undefined
   }
 
@@ -331,7 +330,7 @@ export function getHost (addresses: URL | Multiaddr[], init: RequestInit): strin
   throw new InvalidParametersError('Could not determine request host name - a request must have a host header, be made to a DNS-based multiaddr or an http(s) URL')
 }
 
-export function getCacheKey (resource: URL | Multiaddr[], init: RequestInit): string {
+export function getCacheKey (resource: URL | Multiaddr[], headers: Headers): string {
   let prefix = ''
 
   if (Array.isArray(resource)) {
@@ -344,20 +343,20 @@ export function getCacheKey (resource: URL | Multiaddr[], init: RequestInit): st
     }
   }
 
-  return `${prefix}${getHost(resource, init)}`
+  return `${prefix}${getHost(resource, headers)}`
 }
 
-export async function prepareAndSendRequest (resource: URL | Multiaddr[], init: RequestInit, processors: RequestProcessor[], sendRequest: (resource: URL | Multiaddr[], init: FetchInit) => Promise<Response>): Promise<Response> {
-  for (const processor of processors) {
-    await processor.prepareRequest?.(resource, init)
+export async function prepareAndSendRequest (resource: URL | Multiaddr[], opts: RequestOptions, sendRequest: () => Promise<Response>): Promise<Response> {
+  for (const middleware of opts.middleware) {
+    await middleware.prepareRequest?.(resource, opts)
   }
 
-  return sendRequest(resource, init)
+  return sendRequest()
 }
 
-export async function processResponse (resource: URL | Multiaddr[], init: RequestInit, processors: RequestProcessor[], response: Response): Promise<Response> {
-  for (const proc of processors) {
-    await proc.processResponse?.(resource, init, response)
+export async function processResponse (resource: URL | Multiaddr[], opts: RequestOptions, response: Response): Promise<Response> {
+  for (const middleware of opts.middleware) {
+    await middleware.processResponse?.(resource, opts, response)
   }
 
   return response

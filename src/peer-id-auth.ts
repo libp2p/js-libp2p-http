@@ -5,8 +5,8 @@ import { toString as uint8ArrayToString, fromString as uint8ArrayFromString } fr
 import { parseHeader, sign, verify } from './auth/common.js'
 import { InvalidPeerError, InvalidSignatureError, MissingAuthHeaderError } from './auth/errors.js'
 import { DEFAULT_AUTH_TOKEN_TTL, PEER_ID_AUTH_SCHEME } from './constants.js'
-import { getCacheKey, getHeaders, getHost } from './utils.js'
-import type { FetchInit, HTTP, RequestProcessor } from './index.js'
+import { getCacheKey, getHost } from './utils.js'
+import type { HTTP, RequestMiddleware, RequestOptions } from './index.js'
 import type { AbortOptions, ComponentLogger, Logger, PeerId, PrivateKey } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
@@ -27,7 +27,7 @@ interface PeerIdAuthInit {
   ttl?: number
 }
 
-class PeerIdAuth implements RequestProcessor {
+class PeerIdAuth implements RequestMiddleware {
   private readonly components: PeerIdAuthComponents
   private readonly log: Logger
   private readonly tokens: Map<string, AuthToken>
@@ -42,19 +42,24 @@ class PeerIdAuth implements RequestProcessor {
     this.verifyPeer = init.verifyPeer ?? (() => true)
   }
 
-  async prepareRequest (resource: URL | Multiaddr[], init: FetchInit): Promise<void> {
-    const headers = getHeaders(init)
+  async prepareRequest (resource: URL | Multiaddr[], opts: RequestOptions): Promise<void> {
+    const existingAuthHeader = opts.headers.get('authorization')
 
-    if (headers.get('authorization') != null) {
+    if (existingAuthHeader != null) {
+      if (existingAuthHeader.includes('challenge-server')) {
+        // we are already authenticating this request
+        return
+      }
+
       throw new InvalidParametersError('Will not overwrite existing Authorization header')
     }
 
-    const token = await this.getOrCreateAuthToken(resource, init)
-    headers.set('Authorization', token.bearer)
+    const token = await this.getOrCreateAuthToken(resource, opts)
+    opts.headers.set('Authorization', token.bearer)
   }
 
-  async getOrCreateAuthToken (resource: URL | Multiaddr[], init: FetchInit): Promise<AuthToken> {
-    const key = getCacheKey(resource, init)
+  async getOrCreateAuthToken (resource: URL | Multiaddr[], opts: RequestOptions): Promise<AuthToken> {
+    const key = getCacheKey(resource, opts.headers)
     let token = this.tokens.get(key)
 
     // check token expiry
@@ -65,15 +70,14 @@ class PeerIdAuth implements RequestProcessor {
 
     // create new token
     if (token == null) {
-      token = await this.createAuthToken(resource, init)
+      token = await this.createAuthToken(resource, opts)
     }
 
     return token
   }
 
-  async createAuthToken (resource: URL | Multiaddr[], init: FetchInit): Promise<AuthToken> {
-    const hostname = getHost(resource, init)
-    const headers = getHeaders(init)
+  async createAuthToken (resource: URL | Multiaddr[], opts: RequestOptions): Promise<AuthToken> {
+    const hostname = getHost(resource, opts.headers)
 
     // Client initiated handshake (server initiated is not implemented yet)
     const marshalledClientPubKey = publicKeyToProtobuf(this.components.privateKey.publicKey)
@@ -81,7 +85,7 @@ class PeerIdAuth implements RequestProcessor {
     const challengeServer = generateChallenge()
 
     // copy existing headers
-    const challengeHeaders = new Headers(headers)
+    const challengeHeaders = new Headers(opts.headers)
     challengeHeaders.set('authorization', encodeAuthParams({
       'challenge-server': challengeServer,
       'public-key': publicKeyStr
@@ -90,15 +94,17 @@ class PeerIdAuth implements RequestProcessor {
     const resp = await this.components.http.fetch(resource, {
       method: 'OPTIONS',
       headers: challengeHeaders,
-      signal: init.signal,
-      processors: init.processors?.filter(proc => proc !== this) ?? undefined
+      signal: opts.signal,
+      middleware: opts.middleware.map(m => () => m)
     })
 
     // verify the server's challenge
     const authHeader = resp.headers.get('www-authenticate')
+
     if (authHeader == null) {
       throw new MissingAuthHeaderError('No auth header')
     }
+
     const authFields = parseHeader(authHeader)
     const serverPubKeyBytes = uint8ArrayFromString(authFields['public-key'], 'base64urlpad')
     const serverPubKey = publicKeyFromProtobuf(serverPubKeyBytes)
@@ -115,7 +121,7 @@ class PeerIdAuth implements RequestProcessor {
     const serverPublicKey = publicKeyFromProtobuf(serverPubKeyBytes)
     const serverID = peerIdFromPublicKey(serverPublicKey)
 
-    if (!await this.verifyPeer(serverID, { signal: init.signal ?? undefined })) {
+    if (!await this.verifyPeer(serverID, { signal: opts.signal })) {
       throw new InvalidPeerError('Id check failed')
     }
 
@@ -135,17 +141,17 @@ class PeerIdAuth implements RequestProcessor {
       bearer: authenticateSelfHeaders
     }
 
-    const key = getCacheKey(resource, init)
+    const key = getCacheKey(resource, opts.headers)
     this.tokens.set(key, authToken)
 
     return authToken
   }
 
-  processResponse (resource: URL | Multiaddr[], init: FetchInit, response: Response): void {
-    const serverAuthHeader = response.headers.get('Authentication-Info')
+  processResponse (resource: URL | Multiaddr[], opts: RequestOptions, response: Response): void {
+    const serverAuthHeader = response.headers.get('authentication-info')
 
     if (serverAuthHeader != null) {
-      const key = getCacheKey(resource, init)
+      const key = getCacheKey(resource, opts.headers)
       const token = this.tokens.get(key)
 
       if (token != null) {
@@ -156,7 +162,7 @@ class PeerIdAuth implements RequestProcessor {
   }
 }
 
-export function peerIdAuth (init: PeerIdAuthInit = {}): (components: PeerIdAuthComponents) => RequestProcessor {
+export function peerIdAuth (init: PeerIdAuthInit = {}): (components: PeerIdAuthComponents) => RequestMiddleware {
   return (components) => {
     return new PeerIdAuth(components, init)
   }

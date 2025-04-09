@@ -13,11 +13,9 @@
  *
  * It even allows creating Node.js-style [http.Server](https://nodejs.org/api/http.html#class-httpserver)s
  * and [WebSocketServer](https://github.com/websockets/ws/blob/HEAD/doc/ws.md#class-websocketserver)s
- * (based on the [ws](https://www.npmjs.com/package/ws) module API in the
- * absence of a native Node.js API to emulate) in browsers to truly realize the
- * power of the distributed web.
+ * in browsers to truly realize the power of the distributed web.
  *
- * Instead of the regular "host:port" addressing, it uses a libp2p PeerId and/or
+ * In addition to URL-based addressing, it can use a libp2p PeerId and/or
  * multiaddr(s) and lets libp2p take care of the routing, thus taking advantage
  * of features like multi-routes, NAT transversal and stream multiplexing over a
  * single connection.
@@ -371,7 +369,7 @@ export interface WebSocketInit extends AbortOptions {
    * A list of request processors that can augment requests - if specified will
    * override any processors passed to the `http` service
    */
-  processors?: RequestProcessor[]
+  middleware?: Array<(components: any) => RequestMiddleware>
 
   /**
    * If true, cookies will not be used for this request
@@ -386,7 +384,7 @@ export interface FetchInit extends RequestInit {
    * A list of request processors that can augment requests - if specified will
    * override any processors passed to the `http` service
    */
-  processors?: RequestProcessor[]
+  middleware?: Array<(components: any) => RequestMiddleware>
 
   /**
    * If true, cookies will not be used for this request
@@ -558,14 +556,28 @@ export interface Endpoint {
   inject (info: HeaderInfo, stream: Stream, connection: Connection): Promise<void>
 }
 
+export interface RequestOptions extends AbortOptions {
+  method: string
+  headers: Headers
+  middleware: RequestMiddleware[]
+  ignoreCookies: boolean
+}
+
 /**
  * Request/response middleware that allows augmenting the request/response with
  * additional fields or headers.
  */
-export interface RequestProcessor {
-  prepareRequest?(resource: URL | Multiaddr[], init: FetchInit): void | Promise<void>
+export interface RequestMiddleware {
+  /**
+   * Called before a request is made
+   */
+  prepareRequest?(resource: URL | Multiaddr[], opts: RequestOptions): void | Promise<void>
 
-  processResponse?(resource: URL | Multiaddr[], init: FetchInit, response: Response): void | Promise<void>
+  /**
+   * Called after a request is made but before the body has been read - the
+   * processor may do any necessary housekeeping based on the server response
+   */
+  processResponse?(resource: URL | Multiaddr[], opts: RequestOptions, response: Response): void | Promise<void>
 }
 
 /**
@@ -589,9 +601,10 @@ export interface HTTPInit {
   authTokenTTL?: number
 
   /**
-   * A list of request processors that can augment requests
+   * A list of request processors that can augment requests. Middleware passed
+   * here will be invoked on every request.
    */
-  processors?: RequestProcessor[]
+  middleware?: Array<(components: any) => RequestMiddleware>
 
   /**
    * How often to evict stale cookies from the cache in ms.

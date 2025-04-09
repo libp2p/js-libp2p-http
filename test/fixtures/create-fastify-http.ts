@@ -47,13 +47,13 @@ export async function createFastifyHTTP (server: Server, handler?: Libp2pOverHTT
     })
   })
   app.get('/set-cookies', async (req, res) => {
+    res.statusCode = 201
     await res.setCookie('cookie-1', 'value-1', {
       domain: req.headers.host,
       maxAge: 3600
     })
-    await res.setCookie('cookie-2', 'value-2')
-    res.statusCode = 201
-    await res.send()
+      .setCookie('cookie-2', 'value-2')
+      .send()
   })
   app.get('/get-cookies', async (req, res) => {
     await res.send(JSON.stringify(Object.entries(req.cookies).map(([key, value]) => `${key}=${value}`)))

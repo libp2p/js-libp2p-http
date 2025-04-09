@@ -75,7 +75,7 @@ export interface WebSocketServer extends TypedEventTarget<WebSocketServerEvents>
  * @example
  *
  * ```ts
- * import { createServer, createWebSocketServer } from '@ipshipyard/libp2p-http'
+ * import { createServer, createWebSocketServer } from '@libp2p/http'
  *
  * const wss = createWebSocketServer()
  * wss.addEventListener('connection', (evt) => {
@@ -91,9 +91,7 @@ export interface WebSocketServer extends TypedEventTarget<WebSocketServerEvents>
  * })
  *
  * server.addListener('upgrade', (request, socket, head) => {
- *   wss.handleUpgrade(request, socket, head, (ws) => {
- *     wss.emit('connection', ws, request)
- *   })
+ *   wss.handleUpgrade(request, socket, head)
  * })
  * ``
  */

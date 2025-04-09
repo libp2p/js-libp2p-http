@@ -1,7 +1,6 @@
 import cookie from 'cookie'
 import { toURL } from './http.browser.js'
-import { getHeaders } from './utils.js'
-import type { FetchInit, RequestProcessor } from './index.js'
+import type { RequestMiddleware, RequestOptions } from './index.js'
 import type { ComponentLogger, Logger } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
@@ -21,7 +20,7 @@ interface Cookie {
   path?: string
 }
 
-export class Cookies implements RequestProcessor {
+export class Cookies implements RequestMiddleware {
   private readonly log: Logger
   private readonly cookies: Map<string, Cookie[]>
 
@@ -30,12 +29,12 @@ export class Cookies implements RequestProcessor {
     this.cookies = new Map()
   }
 
-  async prepareRequest (resource: URL | Multiaddr[], init: FetchInit): Promise<void> {
-    if (init.ignoreCookies === true) {
+  async prepareRequest (resource: URL | Multiaddr[], opts: RequestOptions): Promise<void> {
+    if (opts.ignoreCookies) {
       return
     }
 
-    const url = toURL(resource, init)
+    const url = toURL(resource, opts.headers)
     const cookies = (this.cookies.get(url.hostname) ?? []).filter(cookie => {
       if (cookie.expires != null && cookie.expires < Date.now()) {
         return false
@@ -51,19 +50,18 @@ export class Cookies implements RequestProcessor {
       .join('; ')
 
     if (cookies.length > 0) {
-      const headers = getHeaders(init)
-      headers.set('cookie', cookies)
+      opts.headers.set('cookie', cookies)
     }
   }
 
-  async processResponse (resource: URL | Multiaddr[], init: FetchInit, response: Response): Promise<void> {
-    if (init.ignoreCookies === true) {
+  async processResponse (resource: URL | Multiaddr[], opts: RequestOptions, response: Response): Promise<void> {
+    if (opts.ignoreCookies) {
       removeSetCookie(response)
 
       return
     }
 
-    const url = toURL(resource, init)
+    const url = toURL(resource, opts.headers)
 
     for (const value of response.headers.getSetCookie()) {
       const cookies = [

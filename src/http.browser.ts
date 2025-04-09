@@ -3,9 +3,9 @@ import { PROTOCOL, WELL_KNOWN_PROTOCOLS } from './constants.js'
 import { Cookies } from './cookies.js'
 import { fetch } from './fetch/index.js'
 import { HTTPRegistrar } from './registrar.js'
-import { getHost, prepareAndSendRequest, processResponse, stripHTTPPath, toMultiaddrs, toResource } from './utils.js'
+import { getHeaders, getHost, prepareAndSendRequest, processResponse, stripHTTPPath, toMultiaddrs, toResource } from './utils.js'
 import { WebSocket as WebSocketClass } from './websocket/websocket.js'
-import type { HTTPInit, HTTP as HTTPInterface, WebSocketInit, HTTPRequestHandler, ProtocolMap, RequestHandlerOptions, FetchInit, RequestProcessor } from './index.js'
+import type { HTTPInit, HTTP as HTTPInterface, WebSocketInit, HTTPRequestHandler, ProtocolMap, RequestHandlerOptions, FetchInit, RequestMiddleware, RequestOptions } from './index.js'
 import type { ComponentLogger, Logger, PeerId, PrivateKey, Startable } from '@libp2p/interface'
 import type { ConnectionManager, Registrar } from '@libp2p/interface-internal'
 import type { Multiaddr } from '@multiformats/multiaddr'
@@ -21,13 +21,13 @@ export class HTTP implements HTTPInterface, Startable {
   private readonly log: Logger
   protected readonly components: HTTPComponents
   private readonly httpRegistrar: HTTPRegistrar
-  private readonly processors: RequestProcessor[]
+  private readonly middleware: RequestMiddleware[]
 
   constructor (components: HTTPComponents, init: HTTPInit = {}) {
     this.components = components
     this.log = components.logger.forComponent('libp2p:http')
     this.httpRegistrar = new HTTPRegistrar(components, init)
-    this.processors = [
+    this.middleware = [
       new Cookies(components, init)
     ]
   }
@@ -41,14 +41,14 @@ export class HTTP implements HTTPInterface, Startable {
   async start (): Promise<void> {
     await start(
       this.httpRegistrar,
-      ...this.processors
+      ...this.middleware
     )
   }
 
   async stop (): Promise<void> {
     await stop(
       this.httpRegistrar,
-      ...this.processors
+      ...this.middleware
     )
   }
 
@@ -70,24 +70,41 @@ export class HTTP implements HTTPInterface, Startable {
       return socket
     }
 
+    const opts: RequestOptions = {
+      ...init,
+      headers: getHeaders(init),
+      method: 'GET',
+      signal: init.signal ?? undefined,
+      middleware: init.middleware?.map(fn => fn(this.components)) ?? this.middleware,
+      ignoreCookies: init.ignoreCookies ?? false
+    }
+
     // strip http-path tuple but record the value if set
     const { addresses, httpPath } = stripHTTPPath(url)
 
-    return new WebSocketClass(addresses, new URL(`http://${getHost(url, init)}${decodeURIComponent(httpPath)}`), this.components.connectionManager, {
-      ...init,
-      protocols,
-      isClient: true
+    return new WebSocketClass(addresses, new URL(`http://${getHost(url, opts.headers)}${decodeURIComponent(httpPath)}`), this.components.connectionManager, {
+      ...opts,
+      protocols
     })
   }
 
   async fetch (resource: string | URL | Multiaddr | Multiaddr[], init: FetchInit = {}): Promise<Response> {
     const url = toResource(resource)
 
-    const response = await prepareAndSendRequest(url, init, init.processors ?? this.processors, async () => {
+    const opts: RequestOptions = {
+      ...init,
+      headers: getHeaders(init),
+      method: 'GET',
+      signal: init.signal ?? undefined,
+      middleware: init.middleware?.map(fn => fn(this.components)) ?? this.middleware,
+      ignoreCookies: init.ignoreCookies ?? false
+    }
+
+    const response = await prepareAndSendRequest(url, opts, async () => {
       return this.sendRequest(url, init)
     })
 
-    return processResponse(url, init, init.processors ?? this.processors, response)
+    return processResponse(url, opts, response)
   }
 
   async getSupportedProtocols (peer: PeerId | Multiaddr | Multiaddr[]): Promise<ProtocolMap> {
@@ -145,7 +162,7 @@ export class HTTP implements HTTPInterface, Startable {
       return globalThis.fetch(resource, init)
     }
 
-    const host = getHost(resource, init)
+    const host = getHost(resource, getHeaders(init))
 
     // strip http-path tuple but record the value if set
     const { addresses, httpPath } = stripHTTPPath(resource)
@@ -164,12 +181,12 @@ export class HTTP implements HTTPInterface, Startable {
   }
 }
 
-export function toURL (resource: URL | Multiaddr[], init: FetchInit): URL {
+export function toURL (resource: URL | Multiaddr[], headers: Headers): URL {
   if (resource instanceof URL) {
     return resource
   }
 
-  const host = getHost(resource, init)
+  const host = getHost(resource, headers)
   const { httpPath } = stripHTTPPath(resource)
 
   return new URL(`http://${host}${httpPath}`)

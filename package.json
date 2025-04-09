@@ -167,7 +167,7 @@
     "release": "aegir release"
   },
   "dependencies": {
-    "@achingbrain/http-parser-js": "^0.5.8",
+    "@achingbrain/http-parser-js": "^0.5.9",
     "@libp2p/crypto": "^5.0.6",
     "@libp2p/interface": "^2.2.0",
     "@libp2p/interface-internal": "^2.0.10",

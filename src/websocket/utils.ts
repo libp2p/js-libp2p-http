@@ -3,6 +3,7 @@ import { InvalidParametersError, ProtocolError } from '@libp2p/interface'
 import { base64pad } from 'multiformats/bases/base64'
 import { sha1 } from 'multiformats/hashes/sha1'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
+import { Response } from '../fetch/response.js'
 import { BAD_REQUEST, toUint8Array, writeHeaders } from '../utils.js'
 import { StreamWebSocket } from './websocket.js'
 import type { HeaderInfo } from '../index.js'
@@ -35,12 +36,6 @@ export class CodeError extends Error {
   }
 }
 
-export interface Response {
-  status: number
-  statusText: string
-  headers: Headers
-}
-
 export async function readResponse (bytes: ByteStream, options: AbortOptions): Promise<Response> {
   return new Promise((resolve, reject) => {
     let readHeaders = false
@@ -55,11 +50,11 @@ export async function readResponse (bytes: ByteStream, options: AbortOptions): P
         headers.push([info.headers[i], info.headers[i + 1]])
       }
 
-      resolve({
+      resolve(new Response(null, {
         status: info.statusCode,
         statusText: info.statusMessage,
         headers: new Headers(headers)
-      })
+      }))
     }
 
     Promise.resolve()
