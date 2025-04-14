@@ -174,7 +174,7 @@
     "@libp2p/peer-id": "^5.0.7",
     "@multiformats/multiaddr": "^12.3.0",
     "@multiformats/multiaddr-to-uri": "^11.0.0",
-    "http-cookie-agent": "^6.0.7",
+    "http-cookie-agent": "^7.0.1",
     "p-defer": "^4.0.1",
     "tough-cookie": "^5.0.0",
     "uint8-varint": "^2.0.4",
