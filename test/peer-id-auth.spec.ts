@@ -1,10 +1,13 @@
 import { stop } from '@libp2p/interface'
+import { multiaddr } from '@multiformats/multiaddr'
 import { expect } from 'aegir/chai'
+import pDefer from 'p-defer'
+import { pEvent } from 'p-event'
 import { createServer } from '../src/http/index.js'
-import { peerIdAuth } from '../src/peer-id-auth.js'
+import { peerIdAuth } from '../src/middleware/peer-id-auth.js'
 import { nodeServer } from '../src/servers/node.js'
 import { createHttp } from './fixtures/create-http.js'
-import { getClient, getListener } from './fixtures/get-libp2p.js'
+import { getClient, getHTTPOverLibp2pHandler } from './fixtures/get-libp2p.js'
 import type { HTTP } from '../src/index.js'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Libp2p } from 'libp2p'
@@ -21,14 +24,14 @@ const tests: Test[] = [{
   name: 'in-process server',
   startServer: async () => {
     const server = createHttp(createServer())
-    listener = await getListener(nodeServer(server))
+    listener = await getHTTPOverLibp2pHandler(nodeServer(server))
 
     return listener.getMultiaddrs()
   },
   stopServer: async () => {
     await stop(listener)
   }
-}/*, {
+}, {
   name: 'js',
   startServer: async () => {
     return [
@@ -88,10 +91,10 @@ const tests: Test[] = [{
   stopServer: async () => {
 
   }
-} */]
+}]
 
 for (const test of tests) {
-  describe.skip(`peer id auth - ${test.name}`, () => {
+  describe(`peer id auth - ${test.name}`, () => {
     let client: Libp2p<{ http: HTTP }>
     let listenerMultiaddrs: Multiaddr[]
 
@@ -106,7 +109,7 @@ for (const test of tests) {
     })
 
     it('should support peer id auth', async () => {
-      const setResponse = await client.services.http.fetch(listenerMultiaddrs.map(ma => ma.encapsulate('/http-path/set-cookies')), {
+      const response = await client.services.http.fetch(listenerMultiaddrs.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/peer-id')}`)), {
         headers: {
           host: 'test-with-auth.com'
         },
@@ -114,19 +117,148 @@ for (const test of tests) {
           peerIdAuth()
         ]
       })
-      expect(setResponse.status).to.equal(201)
-      expect(setResponse.headers.get('set-cookie')).to.not.be.ok()
+      expect(response.status).to.equal(200)
+      await expect(response.text()).to.eventually.equal(client.peerId.toString())
+    })
 
-      const getResponse = await client.services.http.fetch(listenerMultiaddrs.map(ma => ma.encapsulate('/http-path/get-cookies')), {
+    it('should support optional peer id auth', async () => {
+      const response = await client.services.http.fetch(listenerMultiaddrs.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/optional-peer-id')}`)), {
         headers: {
-          host: 'test-with-cookies.com'
+          host: 'test-with-auth.com'
+        },
+        middleware: [
+          peerIdAuth()
+        ]
+      })
+      expect(response.status).to.equal(200)
+      await expect(response.text()).to.eventually.equal(client.peerId.toString())
+    })
+
+    it('should support optional peer id auth without auth', async () => {
+      const response = await client.services.http.fetch(listenerMultiaddrs.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/optional-peer-id')}`)), {
+        headers: {
+          host: 'test-with-auth.com'
         }
       })
-      expect(getResponse.status).to.equal(200)
-      await expect(getResponse.json()).to.eventually.deep.equal([
-        'cookie-1=value-1',
-        'cookie-2=value-2'
-      ])
+      expect(response.status).to.equal(200)
+      await expect(response.text()).to.eventually.equal('no-peer-id')
+    })
+
+    it('should support WebSocket peer id auth', async () => {
+      const deferred = pDefer<string>()
+      const socket = await client.services.http.connect(listenerMultiaddrs.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/ws-peer-id')}`)), {
+        headers: {
+          host: 'test-with-auth.com'
+        },
+        middleware: [
+          peerIdAuth()
+        ]
+      })
+
+      if (socket.readyState !== WebSocket.OPEN) {
+        await pEvent(socket, 'open')
+      }
+
+      socket.addEventListener('error', (evt: any) => {
+        deferred.reject(evt.error)
+      })
+      socket.addEventListener('close', () => {
+        deferred.reject(new Error('Socket closed before message received'))
+      })
+      socket.addEventListener('message', (evt) => {
+        deferred.resolve(new TextDecoder().decode(evt.data))
+      })
+
+      await expect(deferred.promise).to.eventually.equal(client.peerId.toString())
+    })
+
+    it('should support WebSocket optional peer id auth', async () => {
+      const deferred = pDefer<string>()
+      const socket = await client.services.http.connect(listenerMultiaddrs.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/ws-optional-peer-id')}`)), {
+        headers: {
+          host: 'test-with-auth.com'
+        },
+        middleware: [
+          peerIdAuth()
+        ]
+      })
+
+      if (socket.readyState !== WebSocket.OPEN) {
+        await pEvent(socket, 'open')
+      }
+
+      socket.addEventListener('error', (evt: any) => {
+        deferred.reject(evt.error)
+      })
+      socket.addEventListener('close', () => {
+        deferred.reject(new Error('Socket closed before message received'))
+      })
+      socket.addEventListener('message', (evt) => {
+        deferred.resolve(new TextDecoder().decode(evt.data))
+      })
+
+      await expect(deferred.promise).to.eventually.equal(client.peerId.toString())
+    })
+
+    it('should support WebSocket optional peer id auth without auth', async () => {
+      const deferred = pDefer<string>()
+      const socket = await client.services.http.connect(listenerMultiaddrs.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/ws-optional-peer-id')}`)), {
+        headers: {
+          host: 'test-with-auth.com'
+        }
+      })
+
+      if (socket.readyState !== WebSocket.OPEN) {
+        await pEvent(socket, 'open')
+      }
+
+      socket.addEventListener('error', (evt: any) => {
+        deferred.reject(evt.error)
+      })
+      socket.addEventListener('close', () => {
+        deferred.reject(new Error('Socket closed before message received'))
+      })
+      socket.addEventListener('message', (evt) => {
+        deferred.resolve(new TextDecoder().decode(evt.data))
+      })
+
+      await expect(deferred.promise).to.eventually.equal('no-peer-id')
+    })
+
+    it('should fall back to HTTP on WebSocket route with peer id auth', async () => {
+      const response = await client.services.http.fetch(listenerMultiaddrs.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/ws-peer-id')}`)), {
+        headers: {
+          host: 'test-with-auth.com'
+        },
+        middleware: [
+          peerIdAuth()
+        ]
+      })
+      expect(response.status).to.equal(200)
+      await expect(response.text()).to.eventually.equal(client.peerId.toString())
+    })
+
+    it('should fall back to HTTP on WebSocket route with optional peer id auth', async () => {
+      const response = await client.services.http.fetch(listenerMultiaddrs.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/ws-optional-peer-id')}`)), {
+        headers: {
+          host: 'test-with-auth.com'
+        },
+        middleware: [
+          peerIdAuth()
+        ]
+      })
+      expect(response.status).to.equal(200)
+      await expect(response.text()).to.eventually.equal(client.peerId.toString())
+    })
+
+    it('should fall back to HTTP on WebSocket route with optional peer id auth without auth', async () => {
+      const response = await client.services.http.fetch(listenerMultiaddrs.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/ws-optional-peer-id')}`)), {
+        headers: {
+          host: 'test-with-auth.com'
+        }
+      })
+      expect(response.status).to.equal(200)
+      await expect(response.text()).to.eventually.equal('no-peer-id')
     })
   })
 }

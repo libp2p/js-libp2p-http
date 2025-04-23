@@ -4,12 +4,12 @@ import { byteStream, type ByteStream } from 'it-byte-stream'
 import { Uint8ArrayList } from 'uint8arraylist'
 import { PROTOCOL } from '../constants.js'
 import { getHeaders } from '../utils.js'
-import { ErrorEvent } from './events.js'
+import { CloseEvent, ErrorEvent } from './events.js'
 import { encodeMessage, decodeMessage, CLOSE_MESSAGES } from './message.js'
 import { performClientUpgrade, performServerUpgrade, readResponse, toBytes } from './utils.js'
 import type { CloseListener, ErrorListener, MessageListener, OpenListener, WebSocketEvents } from './index.js'
 import type { MESSAGE_TYPE } from './message.js'
-import type { HeaderInfo, RequestMiddleware, RequestOptions } from '../index.js'
+import type { HeaderInfo, ClientMiddleware, RequestOptions } from '../index.js'
 import type { AbortOptions, Stream } from '@libp2p/interface'
 import type { ConnectionManager } from '@libp2p/interface-internal'
 import type { Multiaddr } from '@multiformats/multiaddr'
@@ -29,7 +29,7 @@ export interface AbstractWebSocketInit extends AbortOptions {
 }
 
 export abstract class AbstractWebSocket extends TypedEventEmitter<WebSocketEvents> {
-  public readonly binaryType = 'arraybuffer'
+  public readonly binaryType: 'arraybuffer' | 'blob' = 'arraybuffer'
   public bufferedAmount = 0
   public extensions = ''
   public protocol: string = ''
@@ -170,8 +170,24 @@ export abstract class AbstractWebSocket extends TypedEventEmitter<WebSocketEvent
       }
 
       if (DATA_MESSAGES.includes(message.type) && message.data != null) {
+        let data: Blob | ArrayBuffer
+
+        if (this.binaryType === 'blob') {
+          data = new Blob([message.data])
+        } else {
+          if (message.data.byteOffset === 0 && message.data.byteLength === message.data.buffer.byteLength) {
+            // Uint8Array aligns with underlying ArrayBuffer
+            data = message.data.buffer
+          } else {
+            // Uint8Array is a view on a larger ArrayBuffer, copy data before
+            // emitting. This is inefficient and slow but that's WebSockets
+            data = new ArrayBuffer(message.data.byteLength)
+            new Uint8Array(data, 0, data.byteLength).set(message.data)
+          }
+        }
+
         this.dispatchEvent(new MessageEvent('message', {
-          data: message.data,
+          data,
           origin: this._url?.hostname
         }))
       }
@@ -344,13 +360,13 @@ export class RequestWebSocket extends AbstractWebSocket {
       throw new InvalidParametersError('Request body cannot be null')
     }
 
+    this.readyState = this.OPEN
     this.writable = writable
     this.writer = writable.getWriter()
     const reader = request.body.getReader()
 
     Promise.resolve()
       .then(async () => {
-        this.readyState = this.OPEN
         this.dispatchEvent(new Event('open'))
 
         while (true) {
@@ -400,7 +416,7 @@ export class RequestWebSocket extends AbstractWebSocket {
 }
 
 export interface WebSocketInit extends RequestOptions {
-  middleware: RequestMiddleware[]
+  middleware: ClientMiddleware[]
   protocols?: string[]
 }
 
@@ -419,10 +435,6 @@ export class WebSocket extends AbstractWebSocket {
         const stream = await connection.newStream(PROTOCOL, init)
         this.bytes = byteStream(stream)
 
-        for (const middleware of init.middleware) {
-          await middleware.prepareRequest?.(mas, init)
-        }
-
         for await (const buf of performClientUpgrade(url, init.protocols, getHeaders(init))) {
           await this.bytes.write(buf)
         }
@@ -430,7 +442,7 @@ export class WebSocket extends AbstractWebSocket {
         const res = await readResponse(this.bytes, {})
 
         if (res.status !== 101) {
-          throw new Error('Invalid WebSocket handshake')
+          throw new Error('Invalid WebSocket handshake - response status ' + res.status)
         }
 
         for (const middleware of init.middleware) {

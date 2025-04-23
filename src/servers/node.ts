@@ -1,7 +1,7 @@
 import { streamToSocket } from '../stream-to-socket.js'
 import { readableToReadableStream } from '../utils.js'
-import type { Endpoint, HeaderInfo } from '../index.js'
-import type { Stream, Connection } from '@libp2p/interface'
+import type { Endpoint, HTTP, HeaderInfo } from '../index.js'
+import type { Stream, Connection, Libp2p } from '@libp2p/interface'
 import type { ServerResponse, IncomingMessage } from 'node:http'
 import type { Socket } from 'node:net'
 
@@ -36,7 +36,7 @@ export function nodeServer (server: ConnectionHandler): Endpoint {
   return new NodeServer({ server })
 }
 
-export function incomingMessageToRequest (req: IncomingMessage): Request {
+function incomingMessageToRequest (req: IncomingMessage): Request {
   const headers = incomingHttpHeadersToHeaders(req.headers)
   const init: RequestInit = {
     method: req.method,
@@ -74,14 +74,13 @@ function incomingHttpHeadersToHeaders (input: IncomingMessage['headers']): Heade
   return headers
 }
 
-export function writeResponse (res: Response, ser: ServerResponse): void {
-  const headers: Record<string, string> = {}
+function writeResponse (res: Response, ser: ServerResponse): void {
+  ser.statusCode = res.status
+  ser.statusMessage = res.statusText
 
   res.headers.forEach((val, key) => {
-    headers[key] = val
+    ser.setHeader(key, val)
   })
-
-  ser.writeHead(res.status, res.statusText, headers)
 
   if (res.body == null) {
     ser.end()
@@ -106,5 +105,66 @@ export function writeResponse (res: Response, ser: ServerResponse): void {
       .catch(err => {
         ser.end(err)
       })
+  }
+}
+
+export interface DidHandle {
+  (...args: any[]): boolean
+}
+
+/**
+ * Helper function to ascertain whether the passed libp2p node handled the
+ * incoming HTTP or WebSocket request.
+ *
+ * @example Delegating handling of HTTP requests
+ *
+ * ```ts
+ * import { createLibp2p } from 'libp2p'
+ * import { canHandle } from '@libp2p/http/servers'
+ * import createServer from 'node:http'
+ *
+ * const libp2p = await createLibp2p({
+ *   // ...options
+ * })
+ *
+ * const handled = canHandle(libp2p)
+ *
+ * createServer((req, res) => {
+ *   if (handled(req, res)) {
+ *     // libp2p handled the request, nothing else to do
+ *     return
+ *   }
+ *
+ *   // handle request normally - pass off to express/fastify/etc or return 404
+ * })
+ * ```
+ */
+export function canHandle (libp2p: Libp2p<{ http: HTTP }>): DidHandle {
+  return (...args: any[]): boolean => {
+    if (args.length === 1) {
+      const ws: WebSocket = args[0]
+
+      if (libp2p.services.http.canHandle(ws)) {
+        libp2p.services.http.onWebSocket(ws)
+        return true
+      }
+    } else if (args.length === 2) {
+      const req: IncomingMessage = args[0]
+      const res: ServerResponse = args[1]
+
+      if (libp2p.services.http.canHandle(req)) {
+        libp2p.services.http.onRequest(incomingMessageToRequest(req))
+          .then(result => {
+            writeResponse(result, res)
+          })
+          .catch(err => {
+            res.writeHead(500, err.toString())
+            res.end()
+          })
+        return true
+      }
+    }
+
+    return false
   }
 }

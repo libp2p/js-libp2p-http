@@ -1,8 +1,12 @@
+import { normalizeUrl } from '../../src/utils.js'
+import type { IncomingMessage } from '../../src/http/incoming-message.js'
 import type { WebSocket as WSSWebSocket } from 'ws'
 
-export function toWebSocket (ws: WSSWebSocket, req: { url?: string }): WebSocket {
+export function toWebSocket (ws: WSSWebSocket, req: IncomingMessage): WebSocket {
+  const url = normalizeUrl(req)
+
   Object.defineProperty(ws, 'url', {
-    value: req.url,
+    value: url.toString(),
     writable: false
   })
 

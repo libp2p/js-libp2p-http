@@ -1,6 +1,6 @@
 import cookie from 'cookie'
-import { toURL } from './http.browser.js'
-import type { RequestMiddleware, RequestOptions } from './index.js'
+import { toURL } from '../http.browser.js'
+import type { ClientMiddleware, RequestOptions } from '../index.js'
 import type { ComponentLogger, Logger } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
@@ -8,7 +8,7 @@ interface CookiesComponents {
   logger: ComponentLogger
 }
 
-interface CookiesInit {
+export interface CookiesInit {
   cookieExpiryCheckInterval?: number
 }
 
@@ -20,7 +20,7 @@ interface Cookie {
   path?: string
 }
 
-export class Cookies implements RequestMiddleware {
+export class Cookies implements ClientMiddleware {
   private readonly log: Logger
   private readonly cookies: Map<string, Cookie[]>
 

@@ -8,7 +8,8 @@ import itToBrowserReadableStream from 'it-to-browser-readablestream'
 import { base36 } from 'multiformats/bases/base36'
 import { fromString as uint8arrayFromString } from 'uint8arrays/from-string'
 import { DNS_CODECS, HTTP_CODEC, HTTP_PATH_CODEC } from './constants.js'
-import type { HeaderInfo, RequestOptions } from './index.js'
+import { Request } from './fetch/request.js'
+import type { HeaderInfo, RequestOptions, WebSocketInit } from './index.js'
 import type { PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Readable } from 'node:stream'
@@ -29,17 +30,13 @@ export function toUint8Array (obj: DataView | ArrayBuffer | Uint8Array): Uint8Ar
   return new Uint8Array(obj, 0, obj.byteLength)
 }
 
-export function streamToRequest (info: HeaderInfo, stream: Stream): Request {
+export function streamToRequest (info: HeaderInfo, stream: Stream): globalThis.Request {
   const init: RequestInit = {
     method: info.method,
     headers: info.headers
   }
 
-  if (info.upgrade) {
-    init.method = 'UPGRADE'
-  }
-
-  if (init.method !== 'GET' && init.method !== 'HEAD') {
+  if ((init.method !== 'GET' || info.upgrade) && init.method !== 'HEAD') {
     let source: AsyncGenerator<any> = stream.source
 
     if (!info.upgrade) {
@@ -51,7 +48,7 @@ export function streamToRequest (info: HeaderInfo, stream: Stream): Request {
     init.duplex = 'half'
   }
 
-  return new Request(`http://${info.headers.get('host') ?? 'host'}${info.url}`, init)
+  return new Request(normalizeUrl(info).toString(), init)
 }
 
 export async function responseToStream (res: Response, stream: Stream): Promise<void> {
@@ -287,9 +284,13 @@ function isValidHost (host?: string): host is string {
 
 export function getHost (addresses: URL | Multiaddr[], headers: Headers): string {
   let host: string | undefined
+  let port = 80
+  let protocol = 'http:'
 
   if (addresses instanceof URL) {
     host = addresses.hostname
+    port = parseInt(addresses.port, 10)
+    protocol = addresses.protocol
   }
 
   if (!isValidHost(host)) {
@@ -314,6 +315,12 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
     for (const address of addresses) {
       const peerStr = address.getPeerId()
 
+      // try to extract port from multiaddr if it is available
+      try {
+        const options = address.toOptions()
+        port = options.port
+      } catch {}
+
       if (peerStr != null) {
         const peerId = peerIdFromString(peerStr)
         // host has to be case-insensitive
@@ -324,6 +331,15 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
   }
 
   if (isValidHost(host)) {
+    // add port if not standard
+    if (protocol === 'http:' && port !== 80) {
+      host = `${host}:${port}`
+    }
+
+    if (protocol === 'https:' && port !== 443) {
+      host = `${host}:${port}`
+    }
+
     return host
   }
 
@@ -354,6 +370,14 @@ export async function prepareAndSendRequest (resource: URL | Multiaddr[], opts: 
   return sendRequest()
 }
 
+export async function prepareAndConnect (resource: URL | Multiaddr[], opts: RequestOptions, connect: () => Promise<globalThis.WebSocket>): Promise<globalThis.WebSocket> {
+  for (const middleware of opts.middleware) {
+    await middleware.prepareRequest?.(resource, opts)
+  }
+
+  return connect()
+}
+
 export async function processResponse (resource: URL | Multiaddr[], opts: RequestOptions, response: Response): Promise<Response> {
   for (const middleware of opts.middleware) {
     await middleware.processResponse?.(resource, opts, response)
@@ -381,4 +405,62 @@ export function stripHTTPPath (addresses: Multiaddr[]): { httpPath: string, addr
     httpPath,
     addresses
   }
+}
+
+export function normalizeMethod (method?: string | string[], defaultMethod = ['GET']): string[] {
+  if (method == null) {
+    return defaultMethod
+  }
+
+  if (typeof method === 'string') {
+    method = [method]
+  }
+
+  return method.map(m => m.toUpperCase())
+}
+
+/**
+ * Returns a fully qualified URL representing the resource that is being
+ * requested
+ */
+export function normalizeUrl (req: { url?: string, headers?: Headers | { host?: string } }): URL {
+  const url = req.url ?? '/'
+
+  if (url.startsWith('http')) {
+    return new URL(url)
+  }
+
+  const host = getHostFromReq(req)
+
+  return new URL(`http://${host}${url}`)
+}
+
+function getHostFromReq (req: any): string {
+  let host = req.headers?.host
+
+  if (host == null) {
+    host = req.headers?.Host
+  }
+
+  if (host == null && typeof req.headers.get === 'function') {
+    host = req.headers.get('host')
+  }
+
+  if (host == null) {
+    throw new InvalidParametersError('Could not read host')
+  }
+
+  return host
+}
+
+export function isWebSocketUpgrade (method: string, headers: Headers): boolean {
+  return method === 'GET' && headers.get('connection')?.toLowerCase() === 'upgrade' && headers.get('upgrade')?.toLowerCase() === 'websocket'
+}
+
+export function isWebSocketInit (opts?: any): opts is WebSocketInit {
+  if (opts == null) {
+    return false
+  }
+
+  return isWebSocketUpgrade(opts.method, opts.headers)
 }

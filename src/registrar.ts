@@ -2,11 +2,14 @@ import { HTTPParser } from '@achingbrain/http-parser-js'
 import { InvalidParametersError } from '@libp2p/interface'
 import { queuelessPushable } from 'it-queueless-pushable'
 import { Uint8ArrayList } from 'uint8arraylist'
-import { PROTOCOL, WEBSOCKET_HANDLER, WELL_KNOWN_PROTOCOLS } from './constants.js'
+import { PROTOCOL, WEBSOCKET_HANDLER } from './constants.js'
 import { Response } from './fetch/response.js'
-import { NOT_FOUND_RESPONSE, responseToStream, streamToRequest } from './utils.js'
-import { wellKnownHandler } from './well-known-handler.js'
-import type { Endpoint, HTTPRequestHandler, HeaderInfo, ProtocolMap, RequestHandlerOptions, WebSocketHandler } from './index.js'
+import { initializeRoute } from './routes/index.js'
+import { wellKnownRoute } from './routes/well-known.js'
+import { NOT_FOUND_RESPONSE, normalizeMethod, normalizeUrl, responseToStream, streamToRequest } from './utils.js'
+import { CLOSE_MESSAGES } from './websocket/message.js'
+import type { Endpoint, HTTPRequestHandler, HeaderInfo, ProtocolMap, WebSocketHandler } from './index.js'
+import type { HTTPRoute, HandlerRoute } from './routes/index.js'
 import type { ComponentLogger, IncomingStreamData, Logger, Stream } from '@libp2p/interface'
 import type { Registrar } from '@libp2p/interface-internal'
 
@@ -21,9 +24,7 @@ export interface HTTPRegistrarInit {
 
 interface ProtocolHandler {
   protocol: string
-  path: string
-  handler: HTTPRequestHandler
-  authenticated?: boolean
+  route: Required<HandlerRoute<HTTPRequestHandler>>
 }
 
 export class HTTPRegistrar {
@@ -31,7 +32,6 @@ export class HTTPRegistrar {
   private readonly components: HTTPRegistrarComponents
   private protocols: ProtocolHandler[]
   private readonly endpoint?: Endpoint
-  private readonly wellKnownHandler: ProtocolHandler
 
   constructor (components: HTTPRegistrarComponents, init: HTTPRegistrarInit = {}) {
     this.components = components
@@ -39,11 +39,7 @@ export class HTTPRegistrar {
     this.protocols = []
     this.onStream = this.onStream.bind(this)
     this.endpoint = init.server
-    this.wellKnownHandler = {
-      protocol: '',
-      path: WELL_KNOWN_PROTOCOLS,
-      handler: wellKnownHandler(this)
-    }
+    this.handle('', wellKnownRoute(this))
   }
 
   async start (): Promise<void> {
@@ -67,6 +63,7 @@ export class HTTPRegistrar {
       const res = await this.onRequest(streamToRequest(info, stream))
       await responseToStream(res, stream)
       await stream.close()
+
       return
     }
 
@@ -86,34 +83,58 @@ export class HTTPRegistrar {
   }
 
   canHandle (req: { url?: string }): boolean {
-    if (req.url === WELL_KNOWN_PROTOCOLS || this.protocols.find(p => p.path === req.url) != null) {
-      this.log('can handle %s', req.url)
+    const url = normalizeUrl(req).pathname
+
+    if (this.protocols.find(p => p.route.path === url) != null) {
+      this.log.trace('can handle %s', url)
       return true
     }
 
-    this.log('cannot handle %s', req.url)
+    this.log.trace('cannot handle %s', url)
     return false
   }
 
   async onRequest (request: Request): Promise<Response> {
-    const result = this.findHandler(request.url)
+    this.log('incoming request %s %s', request.method, request.url)
 
-    if (result?.handler != null) {
-      return result.handler(request)
+    const handler = this.findHandler(request.url)
+
+    if (handler == null) {
+      return new Response(null, {
+        status: 404
+      })
     }
 
-    return new Response(null, {
-      status: 404,
-      statusText: 'Not Found'
-    })
+    let response: Response
+
+    // support OPTIONS method where endpoint does not
+    if (!handler.route.method.includes(request.method)) {
+      if (request.method === 'OPTIONS') {
+        response = new Response(null, {
+          status: 204
+        })
+      } else {
+        response = new Response(null, {
+          status: 405
+        })
+      }
+    } else {
+      response = await handler.route.handler(request)
+    }
+
+    addHeaders(response, request, handler)
+
+    this.log('%s %s %d %s', request.method, request.url, response.status, response.statusText)
+
+    return response
   }
 
   onWebSocket (ws: WebSocket): void {
-    const result = this.findHandler(ws.url)
+    const handler = this.findHandler(ws.url)
 
-    if (result != null) {
+    if (handler != null) {
       // @ts-expect-error hidden field
-      const wsHandler: WebSocketHandler = result.handler[WEBSOCKET_HANDLER]
+      const wsHandler: WebSocketHandler = handler.route[WEBSOCKET_HANDLER]
 
       if (wsHandler != null) {
         wsHandler(ws)
@@ -121,19 +142,15 @@ export class HTTPRegistrar {
       }
     }
 
-    ws.close(404, 'Not Found')
+    ws.close(CLOSE_MESSAGES.NORMAL_CLOSURE)
   }
 
   private findHandler (url: string): ProtocolHandler | undefined {
     const pathname = url.startsWith('/') ? url : new URL(url).pathname
 
-    if (pathname === WELL_KNOWN_PROTOCOLS) {
-      return this.wellKnownHandler
-    }
-
     this.log('search for handler on path %s', pathname)
 
-    const handler = this.protocols.find(p => p.path === pathname)
+    const handler = this.protocols.find(p => p.route.path === pathname)
 
     if (handler != null) {
       this.log('found handler for HTTP protocol %s on path %s', handler.protocol, url)
@@ -142,27 +159,30 @@ export class HTTPRegistrar {
     return handler
   }
 
-  handle (protocol: string, handler: HTTPRequestHandler, options: RequestHandlerOptions = {}): void {
-    let path = options.path ?? crypto.randomUUID()
+  handle (protocol: string, route: HTTPRoute): void {
+    route.path = route.path ?? protocol
 
     if (this.protocols.find(p => p.protocol === protocol) != null) {
       throw new InvalidParametersError(`HTTP protocol handler for ${protocol} already registered`)
     }
 
-    if (path === '' || !path.startsWith('/')) {
-      path = `/${path}`
+    if (route.path === '' || !route.path.startsWith('/')) {
+      route.path = `/${route.path}`
     }
+
+    route.cors = route.cors ?? true
+    route.method = normalizeMethod(route.method)
+    route = initializeRoute(route, this.components)
 
     // add handler
     this.protocols.push({
       protocol,
-      path,
-      handler,
-      authenticated: options.authenticate
+      // @ts-expect-error optional fields are filled out above
+      route
     })
 
     // sort by path length desc so the most specific handler is invoked first
-    this.protocols.sort(({ path: a }, { path: b }) => b.length - a.length)
+    this.protocols.sort(({ route: { path: a } }, { route: { path: b } }) => b.length - a.length)
   }
 
   unhandle (protocol: string): void {
@@ -174,7 +194,7 @@ export class HTTPRegistrar {
 
     for (const p of this.protocols) {
       output[p.protocol] = {
-        path: p.path
+        path: p.route.path
       }
     }
 
@@ -234,4 +254,28 @@ async function readHeaders (stream: Stream): Promise<HeaderInfo> {
         parser.finish()
       })
   })
+}
+
+function addHeaders (response: Response, request: Request, handler: ProtocolHandler): void {
+  const allow = [...new Set(['OPTIONS', ...handler.route.method])].join(', ')
+
+  if (handler.route.cors) {
+    if (request.headers.get('Access-Control-Request-Method') != null) {
+      response.headers.set('access-control-allow-methods', allow)
+    }
+
+    if (request.headers.get('Access-Control-Request-Headers') != null) {
+      response.headers.set('access-control-allow-headers', request.headers.get('Access-Control-Request-Headers') ?? '')
+    }
+
+    if (request.headers.get('Origin') != null) {
+      response.headers.set('access-control-allow-origin', request.headers.get('Origin') ?? '')
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Origin#cors_and_caching
+      response.headers.set('vary', 'Origin')
+    }
+  }
+
+  if (request.method === 'OPTIONS') {
+    response.headers.set('allow', allow)
+  }
 }

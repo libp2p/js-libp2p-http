@@ -4,7 +4,7 @@ import { expect } from 'aegir/chai'
 import { createServer } from '../src/http/index.js'
 import { nodeServer } from '../src/servers/node.js'
 import { createHttp } from './fixtures/create-http.js'
-import { getClient, getListener } from './fixtures/get-libp2p.js'
+import { getClient, getHTTPOverLibp2pHandler } from './fixtures/get-libp2p.js'
 import type { HTTP } from '../src/index.js'
 import type { Libp2p } from 'libp2p'
 
@@ -20,7 +20,7 @@ const tests: Test[] = [{
   name: 'in-process server',
   startServer: async () => {
     const server = createHttp(createServer())
-    listener = await getListener(nodeServer(server))
+    listener = await getHTTPOverLibp2pHandler(nodeServer(server))
 
     return listener.getMultiaddrs()
   },

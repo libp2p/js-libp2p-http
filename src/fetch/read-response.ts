@@ -4,6 +4,8 @@ import type { SendRequestInit } from './index.js'
 import type { Stream } from '@libp2p/interface'
 import type { ByteStream } from 'it-byte-stream'
 
+const nullBodyStatus = [101, 204, 205, 304]
+
 export async function readResponse (bytes: ByteStream<Stream>, resource: URL, init: SendRequestInit): Promise<Response> {
   return new Promise((resolve, reject) => {
     const body = new TransformStream()
@@ -21,7 +23,15 @@ export async function readResponse (bytes: ByteStream<Stream>, resource: URL, in
         headers.append(info.headers[i], info.headers[i + 1])
       }
 
-      const response = new Response(body.readable, {
+      let responseBody: BodyInit | null = body.readable
+
+      if (nullBodyStatus.includes(info.statusCode)) {
+        body.writable.close().catch(() => {})
+        body.readable.cancel().catch(() => {})
+        responseBody = null
+      }
+
+      const response = new Response(responseBody, {
         status: info.statusCode,
         statusText: info.statusMessage,
         headers

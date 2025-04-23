@@ -68,9 +68,11 @@ export function parseHeader (headerVal: string): Record<string, string> {
   const rest = headerVal.substring(PeerIDAuthScheme.length).trim()
   const params: Record<string, string> = {}
   const regex = /(\w[^=]+)="([^"]+)"/g
+
   let match
   while ((match = regex.exec(rest)) !== null) {
     params[match[1]] = match[2]
   }
+
   return params
 }

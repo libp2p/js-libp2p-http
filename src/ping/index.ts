@@ -1,7 +1,7 @@
 // http-ping implementation
 import { PingHTTPService as PingHTTPServiceClass } from './ping.js'
-import type { HTTP } from '../index.js'
-import type { AbortOptions, ComponentLogger, PeerId } from '@libp2p/interface'
+import type { FetchInit, WebSocketInit, HTTP } from '../index.js'
+import type { ComponentLogger, PeerId } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
 export const HTTP_PING_PROTOCOL = '/http-ping/1'
@@ -11,15 +11,18 @@ export interface PingHTTPComponents {
   logger: ComponentLogger
 }
 
-export interface PingOptions extends AbortOptions {
+export interface PingHTTPOptions extends FetchInit {
+}
+
+export interface PingWebSocketOptions extends WebSocketInit {
   /**
-   * If true, make a request over a WebSocket instead of HTTP
+   * Make a request over a WebSocket instead of HTTP
    */
-  webSocket?: true
+  webSocket: true
 }
 
 export interface PingHTTP {
-  ping (peer: PeerId | Multiaddr | Multiaddr[], options?: PingOptions): Promise<number>
+  ping (peer: PeerId | Multiaddr | Multiaddr[], options?: PingHTTPOptions | PingWebSocketOptions): Promise<number>
 }
 
 export function pingHTTP (): (components: PingHTTPComponents) => PingHTTP {

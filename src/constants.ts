@@ -1,5 +1,4 @@
 export const PROTOCOL = '/http/1.1'
-export const WELL_KNOWN_PROTOCOLS = '/.well-known/libp2p/protocols'
 export const WEBSOCKET_HANDLER = Symbol.for('@libp2p/http/websocket-handler')
 export const PEER_ID_AUTH_SCHEME = 'libp2p-PeerID'
 export const HTTP_PEER_ID_AUTH_PROTO = '/http-peer-id-auth/1.0.0'

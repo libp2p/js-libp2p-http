@@ -71,7 +71,9 @@ export function fetchViaDuplex (s: Duplex<Uint8Array | Uint8ArrayList>): Fetch {
 /**
  * A function that can be used to handle HTTP requests
  */
-export interface HTTPHandler { (req: Request): Promise<Response> }
+export interface HTTPHandler {
+  (req: Request): Promise<Response>
+}
 
 /**
  *

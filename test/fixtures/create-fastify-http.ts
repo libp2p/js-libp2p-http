@@ -1,19 +1,19 @@
 import cookies from '@fastify/cookie'
 import { fastify } from 'fastify'
-import type { Libp2pOverHTTPHandler } from './get-libp2p-over-http-handler.js'
+import type { DidHandle } from '../../src/servers/node.js'
 import type { FastifyRequest } from 'fastify'
 import type { Server, IncomingMessage } from 'node:http'
 
-export async function createFastifyHTTP (server: Server, handler?: Libp2pOverHTTPHandler): Promise<Server> {
+export async function createFastifyHTTP (server: Server, handler?: DidHandle): Promise<Server> {
   const app = fastify({
     serverFactory: (app, opts) => {
       server.addListener('request', (req, res) => {
-        res.setHeader('Access-Control-Allow-Origin', '*')
-        res.setHeader('Access-Control-Request-Method', '*')
-        res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
-        res.setHeader('Access-Control-Allow-Headers', '*')
-
         if (handler?.(req, res) !== true) {
+          res.setHeader('Access-Control-Allow-Origin', '*')
+          res.setHeader('Access-Control-Request-Method', '*')
+          res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
+          res.setHeader('Access-Control-Allow-Headers', '*')
+
           app(req, res)
         }
       })

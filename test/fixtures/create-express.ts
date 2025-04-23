@@ -1,13 +1,13 @@
 import cookieParser from 'cookie-parser'
 import express from 'express'
-import type { Libp2pOverHTTPHandler } from './get-libp2p-over-http-handler.js'
+import type { DidHandle } from '../../src/servers/node.js'
 import type { Server } from 'node:http'
 
 /**
  * Creates an Express server that optionally delegates request handling to a
  * Libp2p Over HTTP handler
  */
-export function createExpress (server: Server, handler?: Libp2pOverHTTPHandler): Server {
+export function createExpress (server: Server, handler?: DidHandle): Server {
   const app = express()
   app.use(cookieParser())
   app.get('/', (req, res) => {
@@ -35,12 +35,12 @@ export function createExpress (server: Server, handler?: Libp2pOverHTTPHandler):
   })
 
   server.on('request', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Request-Method', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
-    res.setHeader('Access-Control-Allow-Headers', '*')
-
     if (handler?.(req, res) !== true) {
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Access-Control-Request-Method', '*')
+      res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
+      res.setHeader('Access-Control-Allow-Headers', '*')
+
       app(req, res)
     }
   })

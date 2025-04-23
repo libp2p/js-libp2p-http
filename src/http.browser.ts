@@ -1,11 +1,13 @@
 import { UnsupportedOperationError, serviceCapabilities, start, stop } from '@libp2p/interface'
-import { PROTOCOL, WELL_KNOWN_PROTOCOLS } from './constants.js'
-import { Cookies } from './cookies.js'
+import { PROTOCOL } from './constants.js'
 import { fetch } from './fetch/index.js'
+import { Cookies } from './middleware/cookies.js'
 import { HTTPRegistrar } from './registrar.js'
-import { getHeaders, getHost, prepareAndSendRequest, processResponse, stripHTTPPath, toMultiaddrs, toResource } from './utils.js'
+import { getHeaders, getHost, prepareAndConnect, prepareAndSendRequest, processResponse, stripHTTPPath, toMultiaddrs, toResource } from './utils.js'
 import { WebSocket as WebSocketClass } from './websocket/websocket.js'
-import type { HTTPInit, HTTP as HTTPInterface, WebSocketInit, HTTPRequestHandler, ProtocolMap, RequestHandlerOptions, FetchInit, RequestMiddleware, RequestOptions } from './index.js'
+import { WELL_KNOWN_PROTOCOLS_PATH } from './index.js'
+import type { HTTPInit, HTTP as HTTPInterface, WebSocketInit, ProtocolMap, FetchInit, RequestOptions } from './index.js'
+import type { HTTPRoute } from './routes/index.js'
 import type { ComponentLogger, Logger, PeerId, PrivateKey, Startable } from '@libp2p/interface'
 import type { ConnectionManager, Registrar } from '@libp2p/interface-internal'
 import type { Multiaddr } from '@multiformats/multiaddr'
@@ -21,15 +23,13 @@ export class HTTP implements HTTPInterface, Startable {
   private readonly log: Logger
   protected readonly components: HTTPComponents
   private readonly httpRegistrar: HTTPRegistrar
-  private readonly middleware: RequestMiddleware[]
+  private readonly cookies: Cookies
 
   constructor (components: HTTPComponents, init: HTTPInit = {}) {
     this.components = components
     this.log = components.logger.forComponent('libp2p:http')
     this.httpRegistrar = new HTTPRegistrar(components, init)
-    this.middleware = [
-      new Cookies(components, init)
-    ]
+    this.cookies = new Cookies(components, init)
   }
 
   readonly [Symbol.toStringTag] = '@libp2p/http'
@@ -40,15 +40,13 @@ export class HTTP implements HTTPInterface, Startable {
 
   async start (): Promise<void> {
     await start(
-      this.httpRegistrar,
-      ...this.middleware
+      this.httpRegistrar
     )
   }
 
   async stop (): Promise<void> {
     await stop(
-      this.httpRegistrar,
-      ...this.middleware
+      this.httpRegistrar
     )
   }
 
@@ -60,43 +58,52 @@ export class HTTP implements HTTPInterface, Startable {
     throw new UnsupportedOperationError('This method is not supported in browsers')
   }
 
-  connect (resource: string | URL | Multiaddr | Multiaddr[], protocols?: string[], init: WebSocketInit = {}): globalThis.WebSocket {
+  async connect (resource: string | URL | Multiaddr | Multiaddr[], init: WebSocketInit = {}): Promise<globalThis.WebSocket> {
     const url = toResource(resource)
-
-    if (url instanceof URL) {
-      const socket = new globalThis.WebSocket(url, protocols)
-      socket.binaryType = 'arraybuffer'
-
-      return socket
-    }
-
+    const headers = getHeaders(init)
     const opts: RequestOptions = {
       ...init,
-      headers: getHeaders(init),
+      headers,
       method: 'GET',
-      signal: init.signal ?? undefined,
-      middleware: init.middleware?.map(fn => fn(this.components)) ?? this.middleware,
-      ignoreCookies: init.ignoreCookies ?? false
+      middleware: init.middleware?.map(fn => fn(this.components)) ?? [],
+      // WebSocket requests are not subject to cross-origin checks so do not use
+      // cookies as it introduces a security vulnerability
+      ignoreCookies: true
     }
 
-    // strip http-path tuple but record the value if set
-    const { addresses, httpPath } = stripHTTPPath(url)
+    headers.set('connection', 'upgrade')
+    headers.set('upgrade', 'websocket')
 
-    return new WebSocketClass(addresses, new URL(`http://${getHost(url, opts.headers)}${decodeURIComponent(httpPath)}`), this.components.connectionManager, {
-      ...opts,
-      protocols
+    return prepareAndConnect(url, opts, async () => {
+      if (url instanceof URL) {
+        const socket = new globalThis.WebSocket(url, init.protocols)
+        socket.binaryType = 'arraybuffer'
+
+        return socket
+      }
+
+      // strip http-path tuple but record the value if set
+      const { addresses, httpPath } = stripHTTPPath(url)
+
+      return new WebSocketClass(
+        addresses,
+        new URL(`http://${getHost(url, opts.headers)}${decodeURIComponent(httpPath)}`),
+        this.components.connectionManager,
+        opts
+      )
     })
   }
 
   async fetch (resource: string | URL | Multiaddr | Multiaddr[], init: FetchInit = {}): Promise<Response> {
     const url = toResource(resource)
-
     const opts: RequestOptions = {
       ...init,
       headers: getHeaders(init),
       method: 'GET',
-      signal: init.signal ?? undefined,
-      middleware: init.middleware?.map(fn => fn(this.components)) ?? this.middleware,
+      middleware: [
+        this.cookies,
+        ...init.middleware?.map(fn => fn(this.components)) ?? []
+      ],
       ignoreCookies: init.ignoreCookies ?? false
     }
 
@@ -108,7 +115,7 @@ export class HTTP implements HTTPInterface, Startable {
   }
 
   async getSupportedProtocols (peer: PeerId | Multiaddr | Multiaddr[]): Promise<ProtocolMap> {
-    const addresses = toMultiaddrs(peer, `/http-path/${encodeURIComponent(WELL_KNOWN_PROTOCOLS.substring(1))}`)
+    const addresses = toMultiaddrs(peer, `/http-path/${encodeURIComponent(WELL_KNOWN_PROTOCOLS_PATH.substring(1))}`)
     const resp = await this.fetch(addresses, {
       method: 'GET',
       headers: {
@@ -145,8 +152,8 @@ export class HTTP implements HTTPInterface, Startable {
     this.httpRegistrar.onWebSocket(ws)
   }
 
-  handle (protocol: string, handler: HTTPRequestHandler, options?: RequestHandlerOptions): void {
-    this.httpRegistrar.handle(protocol, handler, options)
+  handle (protocol: string, handler: HTTPRoute): void {
+    this.httpRegistrar.handle(protocol, handler)
   }
 
   unhandle (protocol: string): void {
@@ -159,9 +166,11 @@ export class HTTP implements HTTPInterface, Startable {
 
   private async sendRequest (resource: Multiaddr[] | URL, init: FetchInit): Promise<Response> {
     if (resource instanceof URL) {
+      this.log('making request with global fetch')
       return globalThis.fetch(resource, init)
     }
 
+    this.log('making request with libp2p fetch')
     const host = getHost(resource, getHeaders(init))
 
     // strip http-path tuple but record the value if set

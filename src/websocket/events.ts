@@ -11,3 +11,25 @@ export class ErrorEvent extends Event {
     this.message = err.message
   }
 }
+
+export interface CloseEventInit extends EventInit {
+  code?: number
+  reason?: string
+  wasClean?: boolean
+}
+
+/**
+ * Can remove once node.js 24 becomes LTS
+ */
+export class CloseEvent extends Event {
+  public readonly code: number
+  public readonly reason: string
+  public readonly wasClean: boolean
+
+  constructor (type: string, eventInitDict?: CloseEventInit) {
+    super(type)
+    this.code = eventInitDict?.code ?? 0
+    this.reason = eventInitDict?.reason ?? ''
+    this.wasClean = eventInitDict?.wasClean ?? true
+  }
+}

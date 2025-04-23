@@ -1,9 +1,9 @@
-# @libp2p/http-fetch
+# @libp2p/http
 
 [![libp2p.io](https://img.shields.io/badge/project-libp2p-yellow.svg?style=flat-square)](http://libp2p.io/)
 [![Discuss](https://img.shields.io/discourse/https/discuss.libp2p.io/posts.svg?style=flat-square)](https://discuss.libp2p.io)
-[![codecov](https://img.shields.io/codecov/c/github/libp2p/js-libp2p-http-fetch.svg?style=flat-square)](https://codecov.io/gh/libp2p/js-libp2p-http-fetch)
-[![CI](https://img.shields.io/github/actions/workflow/status/libp2p/js-libp2p-http-fetch/js-test-and-release.yml?branch=main\&style=flat-square)](https://github.com/libp2p/js-libp2p-http-fetch/actions/workflows/js-test-and-release.yml?query=branch%3Amain)
+[![codecov](https://img.shields.io/codecov/c/github/libp2p/js-libp2p-http.svg?style=flat-square)](https://codecov.io/gh/libp2p/js-libp2p-http)
+[![CI](https://img.shields.io/github/actions/workflow/status/libp2p/js-libp2p-http/js-test-and-release.yml?branch=main\&style=flat-square)](https://github.com/libp2p/js-libp2p-http/actions/workflows/js-test-and-release.yml?query=branch%3Amain)
 
 > Accept HTTP requests over libp2p streams or use libp2p protocols over HTTP
 
@@ -46,27 +46,27 @@ single connection.
 # Install
 
 ```console
-$ npm i @libp2p/http-fetch
+$ npm i @libp2p/http
 ```
 
 ## Browser `<script>` tag
 
-Loading this module through a script tag will make its exports available as `Libp2pHttpFetch` in the global namespace.
+Loading this module through a script tag will make its exports available as `Libp2pHttp` in the global namespace.
 
 ```html
-<script src="https://unpkg.com/@libp2p/http-fetch/dist/index.min.js"></script>
+<script src="https://unpkg.com/@libp2p/http/dist/index.min.js"></script>
 ```
 
 # API Docs
 
-- <https://libp2p.github.io/js-libp2p-http-fetch>
+- <https://libp2p.github.io/js-libp2p-http>
 
 # License
 
 Licensed under either of
 
-- Apache 2.0, ([LICENSE-APACHE](https://github.com/libp2p/js-libp2p-http-fetch/LICENSE-APACHE) / <http://www.apache.org/licenses/LICENSE-2.0>)
-- MIT ([LICENSE-MIT](https://github.com/libp2p/js-libp2p-http-fetch/LICENSE-MIT) / <http://opensource.org/licenses/MIT>)
+- Apache 2.0, ([LICENSE-APACHE](https://github.com/libp2p/js-libp2p-http/LICENSE-APACHE) / <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT ([LICENSE-MIT](https://github.com/libp2p/js-libp2p-http/LICENSE-MIT) / <http://opensource.org/licenses/MIT>)
 
 # Contribution
 

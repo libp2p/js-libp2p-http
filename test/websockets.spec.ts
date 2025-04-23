@@ -1,11 +1,11 @@
 import { stop } from '@libp2p/interface'
 import { multiaddr, type Multiaddr } from '@multiformats/multiaddr'
 import { expect } from 'aegir/chai'
-import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
+import pDefer from 'p-defer'
 import { createServer } from '../src/http/index.js'
 import { nodeServer } from '../src/servers/node.js'
 import { createWebSocketServer } from './fixtures/create-websocket-server.js'
-import { getClient, getListener } from './fixtures/get-libp2p.js'
+import { getClient, getHTTPOverLibp2pHandler } from './fixtures/get-libp2p.js'
 import type { HTTP } from '../src/index.js'
 import type { Libp2p } from 'libp2p'
 
@@ -22,7 +22,7 @@ const LIBP2P_SERVERS: Test[] = [{
   startServer: async () => {
     const server = createWebSocketServer(createServer())
 
-    listener = await getListener(nodeServer(server))
+    listener = await getHTTPOverLibp2pHandler(nodeServer(server))
     return listener.getMultiaddrs()[0]
   },
   stopServer: async () => {
@@ -77,23 +77,28 @@ for (const test of LIBP2P_SERVERS) {
       await test.stopServer()
     })
 
-    it('should make an WebSocket request to echo', (cb) => {
+    it('should make an WebSocket request to echo', async () => {
+      const deferred = pDefer<ArrayBuffer>()
       const message = 'This should be echoed'
-      const socket = client.services.http.connect(address.encapsulate('/http-path/echo'), [], {
+      const socket = await client.services.http.connect(address.encapsulate('/http-path/echo'), {
         headers: {
           host: 'example.com'
         }
       })
       socket.addEventListener('error', (evt: any) => {
-        cb(evt.error)
+        deferred.reject(evt.error)
+      })
+      socket.addEventListener('close', () => {
+        deferred.reject(new Error('Socket closed before message received'))
       })
       socket.addEventListener('message', (evt) => {
-        expect(evt.data).to.equalBytes(uint8ArrayFromString(message))
-        cb()
+        deferred.resolve(evt.data)
       })
       socket.addEventListener('open', () => {
         socket.send(message)
       })
+
+      expect(new TextDecoder().decode(await deferred.promise)).to.equal(message)
     })
   })
 }
@@ -133,23 +138,28 @@ for (const test of HTTP_SERVERS) {
       await test.stopServer()
     })
 
-    it('should make an WebSocket request to echo', (cb) => {
+    it('should make an WebSocket request to echo', async () => {
+      const deferred = pDefer<ArrayBuffer>()
       const message = 'This should be echoed'
-      socket = client.services.http.connect(address.encapsulate('/http-path/echo'), [], {
+      socket = await client.services.http.connect(address.encapsulate('/http-path/echo'), {
         headers: {
           host: 'example.com'
         }
       })
       socket.addEventListener('error', (evt: any) => {
-        cb(evt.error)
+        deferred.reject(evt.error)
+      })
+      socket.addEventListener('close', () => {
+        deferred.reject(new Error('Socket closed before message received'))
       })
       socket.addEventListener('message', (evt) => {
-        expect(new Uint8Array(evt.data)).to.equalBytes(uint8ArrayFromString(message))
-        cb()
+        deferred.resolve(evt.data)
       })
       socket.addEventListener('open', () => {
         socket.send(message)
       })
+
+      expect(new TextDecoder().decode(await deferred.promise)).to.equal(message)
     })
   })
 }

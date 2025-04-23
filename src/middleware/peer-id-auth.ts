@@ -2,11 +2,12 @@ import { publicKeyFromProtobuf, publicKeyToProtobuf } from '@libp2p/crypto/keys'
 import { InvalidParametersError } from '@libp2p/interface'
 import { peerIdFromPublicKey } from '@libp2p/peer-id'
 import { toString as uint8ArrayToString, fromString as uint8ArrayFromString } from 'uint8arrays'
-import { parseHeader, sign, verify } from './auth/common.js'
-import { InvalidPeerError, InvalidSignatureError, MissingAuthHeaderError } from './auth/errors.js'
-import { DEFAULT_AUTH_TOKEN_TTL, PEER_ID_AUTH_SCHEME } from './constants.js'
-import { getCacheKey, getHost } from './utils.js'
-import type { HTTP, RequestMiddleware, RequestOptions } from './index.js'
+import { parseHeader, sign, verify } from '../auth/common.js'
+import { InvalidPeerError, InvalidSignatureError, MissingAuthHeaderError } from '../auth/errors.js'
+import { DEFAULT_AUTH_TOKEN_TTL, PEER_ID_AUTH_SCHEME } from '../constants.js'
+import { SEC_WEBSOCKET_PROTOCOL_PREFIX } from '../routes/peer-id-auth.js'
+import { getCacheKey, getHost, isWebSocketInit } from '../utils.js'
+import type { HTTP, ClientMiddleware, RequestOptions } from '../index.js'
 import type { AbortOptions, ComponentLogger, Logger, PeerId, PrivateKey } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
@@ -22,19 +23,19 @@ interface PeerIdAuthComponents {
   http: HTTP
 }
 
-interface PeerIdAuthInit {
+export interface PeerIdAuthInit {
   verifyPeer?(peerId: PeerId): boolean | Promise<boolean>
   ttl?: number
 }
 
-class PeerIdAuth implements RequestMiddleware {
+export class PeerIdAuth implements ClientMiddleware {
   private readonly components: PeerIdAuthComponents
   private readonly log: Logger
   private readonly tokens: Map<string, AuthToken>
   private readonly tokenTTL: number
   private readonly verifyPeer: (peerId: PeerId, options?: AbortOptions) => boolean | Promise<boolean>
 
-  constructor (components: PeerIdAuthComponents, init: PeerIdAuthInit = {}) {
+  constructor (components: PeerIdAuthComponents, init: PeerIdAuthInit) {
     this.components = components
     this.log = components.logger.forComponent('libp2p:http:peer-id-auth')
     this.tokens = new Map()
@@ -43,19 +44,20 @@ class PeerIdAuth implements RequestMiddleware {
   }
 
   async prepareRequest (resource: URL | Multiaddr[], opts: RequestOptions): Promise<void> {
-    const existingAuthHeader = opts.headers.get('authorization')
+    const token = await this.getOrCreateAuthToken(resource, opts)
 
-    if (existingAuthHeader != null) {
-      if (existingAuthHeader.includes('challenge-server')) {
-        // we are already authenticating this request
-        return
+    if (isWebSocketInit(opts)) {
+      opts.protocols = [
+        ...(opts.protocols ?? []),
+        `${SEC_WEBSOCKET_PROTOCOL_PREFIX}${btoa(token.bearer)}`
+      ]
+    } else {
+      if (opts.headers.get('authorization') != null) {
+        throw new InvalidParametersError('Will not overwrite existing Authorization header')
       }
 
-      throw new InvalidParametersError('Will not overwrite existing Authorization header')
+      opts.headers.set('Authorization', token.bearer)
     }
-
-    const token = await this.getOrCreateAuthToken(resource, opts)
-    opts.headers.set('Authorization', token.bearer)
   }
 
   async getOrCreateAuthToken (resource: URL | Multiaddr[], opts: RequestOptions): Promise<AuthToken> {
@@ -86,6 +88,8 @@ class PeerIdAuth implements RequestMiddleware {
 
     // copy existing headers
     const challengeHeaders = new Headers(opts.headers)
+    challengeHeaders.delete('connection')
+    challengeHeaders.delete('upgrade')
     challengeHeaders.set('authorization', encodeAuthParams({
       'challenge-server': challengeServer,
       'public-key': publicKeyStr
@@ -95,14 +99,16 @@ class PeerIdAuth implements RequestMiddleware {
       method: 'OPTIONS',
       headers: challengeHeaders,
       signal: opts.signal,
-      middleware: opts.middleware.map(m => () => m)
+      middleware: opts.middleware
+        .filter(m => m !== this)
+        .map(m => () => m)
     })
 
     // verify the server's challenge
     const authHeader = resp.headers.get('www-authenticate')
 
     if (authHeader == null) {
-      throw new MissingAuthHeaderError('No auth header')
+      throw new MissingAuthHeaderError('No www-authenticate header in response')
     }
 
     const authFields = parseHeader(authHeader)
@@ -162,12 +168,6 @@ class PeerIdAuth implements RequestMiddleware {
   }
 }
 
-export function peerIdAuth (init: PeerIdAuthInit = {}): (components: PeerIdAuthComponents) => RequestMiddleware {
-  return (components) => {
-    return new PeerIdAuth(components, init)
-  }
-}
-
 function generateChallenge (): string {
   const randomBytes = new Uint8Array(32)
   crypto.getRandomValues(randomBytes)
@@ -180,4 +180,10 @@ function encodeAuthParams (params: Record<string, string>): string {
     .join(', ')
 
   return `${PEER_ID_AUTH_SCHEME} ${encodedParams}`
+}
+
+export function peerIdAuth (init: PeerIdAuthInit = {}): (component: any) => ClientMiddleware {
+  return (components) => {
+    return new PeerIdAuth(components, init)
+  }
 }

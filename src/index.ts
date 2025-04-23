@@ -344,47 +344,25 @@
 
 import { HTTP as HTTPClass } from './http.js'
 import type { HTTPComponents } from './http.js'
+import type { HTTPRoute } from './routes/index.js'
 import type { AbortOptions, Connection, PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Agent, AgentOptions, IncomingMessage } from 'node:http'
 import type { Uint8ArrayList } from 'uint8arraylist'
 import type { Dispatcher, Agent as UnidiciAgent } from 'undici'
 
-export { WELL_KNOWN_PROTOCOLS } from './constants.js'
+export { WELL_KNOWN_PROTOCOLS_PATH } from './routes/well-known.js'
 
-export interface WebSocketInit extends AbortOptions {
-  /**
-   * The maximum message size to be sent or received over the socket in bytes
-   *
-   * @default 10_485_760
-   */
-  maxMessageSize?: number
-
-  /**
-   * Headers to send with the initial upgrade request
-   */
-  headers?: HeadersInit
-
+/**
+ * Options used to control Fetch request and the initial WebSocket upgrade
+ * request
+ */
+export interface HTTPRequestOptions extends AbortOptions {
   /**
    * A list of request processors that can augment requests - if specified will
    * override any processors passed to the `http` service
    */
-  middleware?: Array<(components: any) => RequestMiddleware>
-
-  /**
-   * If true, cookies will not be used for this request
-   *
-   * @default false
-   */
-  ignoreCookies?: boolean
-}
-
-export interface FetchInit extends RequestInit {
-  /**
-   * A list of request processors that can augment requests - if specified will
-   * override any processors passed to the `http` service
-   */
-  middleware?: Array<(components: any) => RequestMiddleware>
+  middleware?: Array<(components: any) => ClientMiddleware>
 
   /**
    * If true, cookies will not be used for this request
@@ -399,7 +377,35 @@ export interface FetchInit extends RequestInit {
    * @default 81_920
    */
   maxHeaderSize?: number
+
+  /**
+   * If true, verify the server's peer id using PeerId Authentication
+   *
+   * @default false
+   */
+  authenticateServer?: boolean
 }
+
+export interface WebSocketInit extends HTTPRequestOptions {
+  /**
+   * The maximum message size to be sent or received over the socket in bytes
+   *
+   * @default 10_485_760
+   */
+  maxMessageSize?: number
+
+  /**
+   * Headers to send with the initial upgrade request
+   */
+  headers?: HeadersInit
+
+  /**
+   * Protocols to send with the upgrade request
+   */
+  protocols?: string[]
+}
+
+export type FetchInit = HTTPRequestOptions & RequestInit
 
 export interface HTTPRequestHandler {
   (req: Request): Promise<Response>
@@ -419,22 +425,29 @@ export type ProtocolMap = Record<ProtocolID, ProtocolDescriptor>
 
 export interface RequestHandlerOptions {
   /**
-   * If true, all requests to this handler will be authenticated using peer id
-   * auth before they are passed to the handler.
+   * Specify a path to serve the protocol from. If omitted the protocol name
+   * will be used.
    *
-   * @see https://github.com/libp2p/specs/blob/master/http/peer-id-auth.md
-   *
-   * @default false
-   */
-  authenticate?: boolean
-
-  /**
-   * Specify a path to serve the protocol from. If omitted a random one will be
-   * generated which can be looked up from the protocol map using
-   * `getProtocolMap()` or by making a GET request to
-   * `/.well-known/libp2p/protocols`.
+   * Paths can be looked up from the protocol map using `getProtocolMap()` or by
+   * making a GET request to `/.well-known/libp2p/protocols`.
    */
   path?: string
+
+  /**
+   * A list of HTTP verbs this handler will respond to. If the handler is found
+   * but the request method is not present a 405 will be returned.
+   *
+   * @default ['GET']
+   */
+  methods?: string[]
+
+  /**
+   * By default all handlers support CORS headers, pass `false` here to disallow
+   * access to fetch requests.
+   *
+   * @default true
+   */
+  cors?: boolean
 }
 
 /**
@@ -462,7 +475,7 @@ export interface HTTP {
    * URLs can start with the `multiaddr:` scheme if the global URL class in the
    * runtime environment supports it.
    */
-  connect (resource: string | URL | Multiaddr | Multiaddr[], protocols?: string[], init?: WebSocketInit): WebSocket
+  connect (resource: string | URL | Multiaddr | Multiaddr[], init?: WebSocketInit): Promise<WebSocket>
 
   /**
    * Get a libp2p-enabled Agent for use with node's `http` module. This method
@@ -498,7 +511,7 @@ export interface HTTP {
   /**
    * Register a listener for a HTTP protocol
    */
-  handle (protocol: string, handler: HTTPRequestHandler, options?: RequestHandlerOptions): void
+  handle (protocol: string, handler: HTTPRoute<HTTPRequestHandler>): void
 
   /**
    * Remove a listener for a HTTP protocol
@@ -559,15 +572,15 @@ export interface Endpoint {
 export interface RequestOptions extends AbortOptions {
   method: string
   headers: Headers
-  middleware: RequestMiddleware[]
+  middleware: ClientMiddleware[]
   ignoreCookies: boolean
 }
 
 /**
- * Request/response middleware that allows augmenting the request/response with
- * additional fields or headers.
+ * Middleware that allows augmenting the client request/response with additional
+ * fields or headers.
  */
-export interface RequestMiddleware {
+export interface ClientMiddleware {
   /**
    * Called before a request is made
    */
@@ -602,9 +615,9 @@ export interface HTTPInit {
 
   /**
    * A list of request processors that can augment requests. Middleware passed
-   * here will be invoked on every request.
+   * here will be invoked on every outgoing request.
    */
-  middleware?: Array<(components: any) => RequestMiddleware>
+  middleware?: Array<(components: any) => ClientMiddleware>
 
   /**
    * How often to evict stale cookies from the cache in ms.
