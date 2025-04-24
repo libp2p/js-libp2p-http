@@ -8,20 +8,13 @@ import { tcp } from '@libp2p/tcp'
 import { multiaddr } from '@multiformats/multiaddr'
 import { createLibp2p } from 'libp2p'
 
-const node = await createLibp2p({
-  // libp2p nodes are started by default, pass false to override this
-  start: false,
-  addresses: {
-    listen: []
-  },
+const client = await createLibp2p({
   transports: [tcp()],
   connectionEncrypters: [noise()],
   streamMuxers: [yamux()],
   services: { http: http() }
 })
 
-// start libp2p
-await node.start()
 console.error('libp2p has started')
 
 // Read server multiaddr from the command line
@@ -37,13 +30,13 @@ const isHTTPTransport = serverMA.protos().find(p => p.name === 'http') // check 
 if (!isHTTPTransport && serverMA.getPeerId() === null) {
   // Learn the peer id of the server. This lets us reuse the connection for all our HTTP requests.
   // Otherwise js-libp2p will open a new connection for each request.
-  const conn = await node.dial(serverMA)
+  const conn = await client.dial(serverMA)
   serverMA = serverMA.encapsulate(`/p2p/${conn.remotePeer.toString()}`)
 }
 
 console.error('Making request to', `${serverMA.toString()}`)
 try {
-  const resp = await node.services.http.fetch(new Request(`multiaddr:${serverMA}` + `/http-path/${encodeURIComponent('my-app')}`))
+  const resp = await client.services.http.fetch(new Request(`multiaddr:${serverMA}` + `/http-path/${encodeURIComponent('my-app')}`))
   const respBody = await resp.text()
   if (resp.status !== 200) {
     throw new Error(`Unexpected status code: ${resp.status}`)
@@ -53,9 +46,9 @@ try {
   }
 
   const start = new Date().getTime()
-  await sendPing(node, serverMA)
+  await sendPing(client, serverMA)
   const end = new Date().getTime()
   console.error('HTTP Ping took', end - start, 'ms')
 } finally {
-  await node.stop()
+  await client.stop()
 }

@@ -5,7 +5,7 @@
 [![codecov](https://img.shields.io/codecov/c/github/libp2p/js-libp2p-http.svg?style=flat-square)](https://codecov.io/gh/libp2p/js-libp2p-http)
 [![CI](https://img.shields.io/github/actions/workflow/status/libp2p/js-libp2p-http/js-test-and-release.yml?branch=main\&style=flat-square)](https://github.com/libp2p/js-libp2p-http/actions/workflows/js-test-and-release.yml?query=branch%3Amain)
 
-> Accept HTTP requests over libp2p streams and/or use libp2p protocols over HTTP
+> Accept HTTP requests over libp2p streams or use libp2p protocols over HTTP
 
 # About
 

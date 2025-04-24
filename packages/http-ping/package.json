@@ -1,0 +1,58 @@
+{
+  "name": "@libp2p/http-ping",
+  "version": "0.0.0",
+  "description": "An HTTP version of the ping protocol",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/config#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/libp2p/js-libp2p-http.git"
+  },
+  "bugs": {
+    "url": "https://github.com/libp2p/js-libp2p-http/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "src",
+    "dist",
+    "!dist/test",
+    "!**/*.tsbuildinfo"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "eslintConfig": {
+    "extends": "ipfs",
+    "parserOptions": {
+      "project": true,
+      "sourceType": "module"
+    }
+  },
+  "scripts": {
+    "build": "aegir build --bundle false",
+    "test": "aegir test -t node",
+    "clean": "aegir clean",
+    "lint": "aegir lint",
+    "test:node": "aegir test -t node --cov",
+    "dep-check": "aegir dep-check",
+    "doc-check": "aegir doc-check"
+  },
+  "dependencies": {
+    "@libp2p/crypto": "^5.1.1",
+    "@libp2p/interface": "^2.9.0",
+    "@libp2p/keychain": "^5.2.1",
+    "@libp2p/logger": "^5.1.15",
+    "interface-datastore": "^8.3.1"
+  },
+  "devDependencies": {
+    "aegir": "^45.1.1"
+  },
+  "sideEffects": false
+}
