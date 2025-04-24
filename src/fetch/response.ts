@@ -1,4 +1,5 @@
 import { STATUS_CODES } from '../constants.js'
+import { getHeaders } from '../utils.js'
 
 /**
  * Extends the native Response class to be more flexible.
@@ -11,11 +12,8 @@ import { STATUS_CODES } from '../constants.js'
  * just those allowed by the fetch spec
  */
 export class Response extends globalThis.Response {
-  public readonly status: number
-  public readonly statusText: string
-  public readonly headers: Headers
-
   constructor (body: BodyInit | null, init: ResponseInit = {}) {
+    const headers = getHeaders(init)
     const status = init.status ?? 200
 
     if (status < 200 || status > 599) {
@@ -24,8 +22,19 @@ export class Response extends globalThis.Response {
 
     super(body, init)
 
-    this.status = status
-    this.statusText = STATUS_CODES[status]
-    this.headers = new Headers(init?.headers)
+    Object.defineProperties(this, {
+      status: {
+        value: status,
+        writable: false
+      },
+      statusText: {
+        value: STATUS_CODES[status],
+        writable: false
+      },
+      headers: {
+        value: headers,
+        writable: false
+      }
+    })
   }
 }

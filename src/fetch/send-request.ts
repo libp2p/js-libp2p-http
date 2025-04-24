@@ -1,10 +1,6 @@
 import { fromString as uint8arrayFromString } from 'uint8arrays/from-string'
 import { writeHeaders } from '../utils.js'
-import { blobBody } from './body/blob.js'
-import { bytesBody } from './body/bytes.js'
-import { formDataBody } from './body/form-data.js'
-import { readableStreamBody } from './body/readable-stream.js'
-import { stringBody } from './body/string.js'
+import { normalizeContent } from './utils.js'
 import type { SendRequestInit } from './index.js'
 import type { Stream } from '@libp2p/interface'
 import type { ByteStream } from 'it-byte-stream'
@@ -19,11 +15,7 @@ export async function sendRequest (bytes: ByteStream<Stream>, url: URL, init: Se
     headers.set('user-agent', 'libp2p/fetch')
   }
 
-  let content: ReadableStream<Uint8Array> | undefined
-
-  if (init.body != null) {
-    content = normalizeContent(init.body, headers)
-  }
+  const content = normalizeContent(init.body, headers)
 
   const req = [
     `${init?.method?.toUpperCase() ?? 'GET'} ${url.pathname ?? '/'} HTTP/1.1`,
@@ -60,30 +52,4 @@ async function sendBody (bytes: ByteStream<Stream>, stream: ReadableStream<Uint8
       break
     }
   }
-}
-
-function normalizeContent (body: BodyInit, headers: Headers): ReadableStream {
-  if (typeof body === 'string') {
-    return stringBody(body, headers)
-  } else if (body instanceof Blob) {
-    return blobBody(body, headers)
-  } else if (isBytes(body)) {
-    return bytesBody(body, headers)
-  } else if (body instanceof URLSearchParams) {
-    return stringBody(body.toString(), headers)
-  } else if (body instanceof ReadableStream) {
-    return readableStreamBody(body, headers)
-  } else if (body instanceof FormData) {
-    return formDataBody(body, headers)
-  }
-
-  throw new Error('Unsupported body type')
-}
-
-function isBytes (obj?: any): obj is Uint8Array {
-  if (obj == null) {
-    return false
-  }
-
-  return obj.byteLength != null
 }
