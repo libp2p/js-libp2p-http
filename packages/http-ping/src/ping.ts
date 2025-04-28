@@ -1,11 +1,9 @@
-// http-ping implementation
+import { authenticatedWebSocketRoute } from '@libp2p/http'
+import { toMultiaddrs } from '@libp2p/http-utils'
 import { ProtocolError, serviceDependencies } from '@libp2p/interface'
 import { raceEvent } from 'race-event'
 import { raceSignal } from 'race-signal'
 import { equals as uint8ArrayEquals } from 'uint8arrays/equals'
-import { Response } from '../fetch/response.js'
-import { authenticatedWebSocketRoute } from '../routes/peer-id-auth.js'
-import { toMultiaddrs } from '../utils.js'
 import { HTTP_PING_PROTOCOL } from './index.js'
 import type { PingHTTPComponents, PingHTTP as PingHTTPInterface, PingHTTPOptions, PingWebSocketOptions } from './index.js'
 import type { Logger, PeerId, Startable } from '@libp2p/interface'
@@ -117,7 +115,8 @@ export class PingHTTPService implements PingHTTPInterface, Startable {
     const res = await this.components.http.fetch(dialTarget, {
       ...options,
       method: 'POST',
-      body: buf
+      body: buf,
+      signal: options.signal ?? undefined
     })
 
     if (res.status !== 200) {
@@ -127,12 +126,15 @@ export class PingHTTPService implements PingHTTPInterface, Startable {
     return res.arrayBuffer()
   }
 
-  async webSocketPing (dialTarget: Multiaddr[], buf: Uint8Array, options: PingWebSocketOptions): Promise<ArrayBuffer> {
+  async webSocketPing (dialTarget: Multiaddr[], buf: Uint8Array, options: PingHTTPOptions): Promise<ArrayBuffer> {
     this.log('opening websocket connection to %a', dialTarget)
-    const socket = await this.components.http.connect(dialTarget, options)
+    const socket = await this.components.http.connect(dialTarget, {
+      ...options,
+      signal: options.signal ?? undefined
+    })
 
     if (socket.readyState !== WebSocket.OPEN) {
-      await raceEvent(socket, 'open', options.signal)
+      await raceEvent(socket, 'open', options.signal ?? undefined)
       this.log('websocket connection to %a open', dialTarget)
     }
 

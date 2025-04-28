@@ -1,15 +1,14 @@
 import { HTTPParser } from '@achingbrain/http-parser-js'
+import { NOT_FOUND_RESPONSE, normalizeMethod, normalizeUrl, responseToStream, streamToRequest } from '@libp2p/http-utils'
+import { CLOSE_MESSAGES } from '@libp2p/http-websocket'
 import { InvalidParametersError } from '@libp2p/interface'
 import { queuelessPushable } from 'it-queueless-pushable'
 import { Uint8ArrayList } from 'uint8arraylist'
-import { PROTOCOL, WEBSOCKET_HANDLER } from './constants.js'
-import { Response } from './fetch/response.js'
-import { initializeRoute } from './routes/index.js'
+import { HTTP_PROTOCOL, WEBSOCKET_HANDLER } from './constants.js'
+import { initializeRoute } from './routes/utils.js'
 import { wellKnownRoute } from './routes/well-known.js'
-import { NOT_FOUND_RESPONSE, normalizeMethod, normalizeUrl, responseToStream, streamToRequest } from './utils.js'
-import { CLOSE_MESSAGES } from './websocket/message.js'
-import type { Endpoint, HTTPRequestHandler, HeaderInfo, ProtocolMap, WebSocketHandler } from './index.js'
-import type { HTTPRoute, HandlerRoute } from './routes/index.js'
+import type { WebServer, HTTPRequestHandler, ProtocolMap, WebSocketHandler, HTTPRoute, HandlerRoute } from './index.js'
+import type { HeaderInfo } from '@libp2p/http-utils'
 import type { ComponentLogger, IncomingStreamData, Logger, Stream } from '@libp2p/interface'
 import type { Registrar } from '@libp2p/interface-internal'
 
@@ -19,7 +18,7 @@ export interface HTTPRegistrarComponents {
 }
 
 export interface HTTPRegistrarInit {
-  server?: Endpoint
+  server?: WebServer
 }
 
 interface ProtocolHandler {
@@ -31,7 +30,7 @@ export class HTTPRegistrar {
   private readonly log: Logger
   private readonly components: HTTPRegistrarComponents
   private protocols: ProtocolHandler[]
-  private readonly endpoint?: Endpoint
+  private readonly endpoint?: WebServer
 
   constructor (components: HTTPRegistrarComponents, init: HTTPRegistrarInit = {}) {
     this.components = components
@@ -43,7 +42,7 @@ export class HTTPRegistrar {
   }
 
   async start (): Promise<void> {
-    await this.components.registrar.handle(PROTOCOL, (data) => {
+    await this.components.registrar.handle(HTTP_PROTOCOL, (data) => {
       this.onStream(data)
         .catch(err => {
           this.log.error('could not handle incoming stream - %e', err)
@@ -52,7 +51,7 @@ export class HTTPRegistrar {
   }
 
   async stop (): Promise<void> {
-    await this.components.registrar.unhandle(PROTOCOL)
+    await this.components.registrar.unhandle(HTTP_PROTOCOL)
   }
 
   private async onStream ({ stream, connection }: IncomingStreamData): Promise<void> {

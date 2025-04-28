@@ -1,10 +1,9 @@
 import { Agent as NodeAgent } from 'node:http'
+import { streamToSocket, toResource } from '@libp2p/http-utils'
 import { isPeerId } from '@libp2p/interface'
 import { Agent as UnidiciAgent } from 'undici'
-import { PROTOCOL } from './constants.js'
+import { HTTP_PROTOCOL } from './constants.js'
 import { HTTP as HTTPBrowser } from './http.browser.js'
-import { streamToSocket } from './stream-to-socket.js'
-import { toResource } from './utils.js'
 import type { HTTP as HTTPInterface } from './index.js'
 import type { AbortOptions, PeerId } from '@libp2p/interface'
 import type { ConnectionManager, Registrar } from '@libp2p/interface-internal'
@@ -17,7 +16,7 @@ export type { HTTPComponents } from './http.browser.js'
 
 async function createConnection (connectionManager: ConnectionManager, peer: PeerId | Multiaddr | Multiaddr[], options?: AbortOptions): Promise<Socket> {
   const connection = await connectionManager.openConnection(peer, options)
-  const stream = await connection.newStream(PROTOCOL, options)
+  const stream = await connection.newStream(HTTP_PROTOCOL, options)
 
   return streamToSocket(stream, connection)
 }

@@ -1,13 +1,14 @@
+import { fetch } from '@libp2p/http-fetch'
+import { getHeaders, getHost, stripHTTPPath, toMultiaddrs, toResource } from '@libp2p/http-utils'
+import { WebSocket } from '@libp2p/http-websocket'
 import { UnsupportedOperationError, serviceCapabilities, start, stop } from '@libp2p/interface'
-import { PROTOCOL } from './constants.js'
-import { fetch } from './fetch/index.js'
+import { HTTP_PROTOCOL } from './constants.js'
 import { Cookies } from './middleware/cookies.js'
+import { Origin } from './middleware/origin.js'
 import { HTTPRegistrar } from './registrar.js'
-import { getHeaders, getHost, prepareAndConnect, prepareAndSendRequest, processResponse, stripHTTPPath, toMultiaddrs, toResource } from './utils.js'
-import { WebSocket as WebSocketClass } from './websocket/websocket.js'
+import { prepareAndConnect, prepareAndSendRequest, processResponse } from './utils.js'
 import { WELL_KNOWN_PROTOCOLS_PATH } from './index.js'
-import type { HTTPInit, HTTP as HTTPInterface, WebSocketInit, ProtocolMap, FetchInit, RequestOptions } from './index.js'
-import type { HTTPRoute } from './routes/index.js'
+import type { HTTPInit, HTTP as HTTPInterface, ProtocolMap, FetchInit, HTTPRoute, ConnectInit, MiddlewareOptions } from './index.js'
 import type { ComponentLogger, Logger, PeerId, PrivateKey, Startable } from '@libp2p/interface'
 import type { ConnectionManager, Registrar } from '@libp2p/interface-internal'
 import type { Multiaddr } from '@multiformats/multiaddr'
@@ -23,12 +24,14 @@ export class HTTP implements HTTPInterface, Startable {
   private readonly log: Logger
   protected readonly components: HTTPComponents
   private readonly httpRegistrar: HTTPRegistrar
+  private readonly origin: Origin
   private readonly cookies: Cookies
 
   constructor (components: HTTPComponents, init: HTTPInit = {}) {
     this.components = components
     this.log = components.logger.forComponent('libp2p:http')
     this.httpRegistrar = new HTTPRegistrar(components, init)
+    this.origin = new Origin()
     this.cookies = new Cookies(components, init)
   }
 
@@ -58,17 +61,14 @@ export class HTTP implements HTTPInterface, Startable {
     throw new UnsupportedOperationError('This method is not supported in browsers')
   }
 
-  async connect (resource: string | URL | Multiaddr | Multiaddr[], init: WebSocketInit = {}): Promise<globalThis.WebSocket> {
+  async connect (resource: string | URL | Multiaddr | Multiaddr[], init: ConnectInit = {}): Promise<globalThis.WebSocket> {
     const url = toResource(resource)
     const headers = getHeaders(init)
-    const opts: RequestOptions = {
+    const opts: MiddlewareOptions = {
       ...init,
       headers,
       method: 'GET',
-      middleware: init.middleware?.map(fn => fn(this.components)) ?? [],
-      // WebSocket requests are not subject to cross-origin checks so do not use
-      // cookies as it introduces a security vulnerability
-      ignoreCookies: true
+      middleware: init.middleware?.map(fn => fn(this.components)) ?? []
     }
 
     headers.set('connection', 'upgrade')
@@ -85,7 +85,7 @@ export class HTTP implements HTTPInterface, Startable {
       // strip http-path tuple but record the value if set
       const { addresses, httpPath } = stripHTTPPath(url)
 
-      return new WebSocketClass(
+      return new WebSocket(
         addresses,
         new URL(`http://${getHost(url, opts.headers)}${decodeURIComponent(httpPath)}`),
         this.components.connectionManager,
@@ -96,15 +96,15 @@ export class HTTP implements HTTPInterface, Startable {
 
   async fetch (resource: string | URL | Multiaddr | Multiaddr[], init: FetchInit = {}): Promise<Response> {
     const url = toResource(resource)
-    const opts: RequestOptions = {
+    const opts: MiddlewareOptions = {
       ...init,
       headers: getHeaders(init),
       method: 'GET',
       middleware: [
+        this.origin,
         this.cookies,
         ...init.middleware?.map(fn => fn(this.components)) ?? []
-      ],
-      ignoreCookies: init.ignoreCookies ?? false
+      ]
     }
 
     const response = await prepareAndSendRequest(url, opts, async () => {
@@ -148,7 +148,7 @@ export class HTTP implements HTTPInterface, Startable {
     return this.httpRegistrar.onRequest(req)
   }
 
-  onWebSocket (ws: WebSocket): void {
+  onWebSocket (ws: globalThis.WebSocket): void {
     this.httpRegistrar.onWebSocket(ws)
   }
 
@@ -179,7 +179,7 @@ export class HTTP implements HTTPInterface, Startable {
     const connection = await this.components.connectionManager.openConnection(addresses, {
       signal: init.signal ?? undefined
     })
-    const stream = await connection.newStream(PROTOCOL, {
+    const stream = await connection.newStream(HTTP_PROTOCOL, {
       signal: init.signal ?? undefined
     })
 
@@ -188,15 +188,4 @@ export class HTTP implements HTTPInterface, Startable {
       logger: this.components.logger
     })
   }
-}
-
-export function toURL (resource: URL | Multiaddr[], headers: Headers): URL {
-  if (resource instanceof URL) {
-    return resource
-  }
-
-  const host = getHost(resource, headers)
-  const { httpPath } = stripHTTPPath(resource)
-
-  return new URL(`http://${host}${httpPath}`)
 }

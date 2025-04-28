@@ -13,7 +13,7 @@
   },
   "private": true,
   "scripts": {
-    "reset": "aegir run clean && aegir clean interop/node_modules packages/*/node_modules node_modules package-lock.json packages/*/package-lock.json interop/*/package-lock.json",
+    "reset": "aegir run clean && aegir clean examples/*/node_modules packages/*/node_modules node_modules package-lock.json packages/*/package-lock.json examples/*/package-lock.json",
     "test": "aegir run test",
     "test:node": "aegir run test:node",
     "test:chrome": "aegir run test:chrome",

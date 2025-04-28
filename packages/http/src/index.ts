@@ -343,12 +343,12 @@
  */
 
 import { HTTP as HTTPClass } from './http.js'
+import type { WEBSOCKET_HANDLER } from './constants.js'
 import type { HTTPComponents } from './http.js'
-import type { HTTPRoute } from './routes/index.js'
+import type { HeaderInfo, MiddlewareOptions, Middleware } from '@libp2p/http-utils'
 import type { AbortOptions, Connection, PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Agent, AgentOptions, IncomingMessage } from 'node:http'
-import type { Uint8ArrayList } from 'uint8arraylist'
 import type { Dispatcher, Agent as UnidiciAgent } from 'undici'
 
 export { WELL_KNOWN_PROTOCOLS_PATH } from './routes/well-known.js'
@@ -362,14 +362,7 @@ export interface HTTPRequestOptions extends AbortOptions {
    * A list of request processors that can augment requests - if specified will
    * override any processors passed to the `http` service
    */
-  middleware?: Array<(components: any) => ClientMiddleware>
-
-  /**
-   * If true, cookies will not be used for this request
-   *
-   * @default false
-   */
-  ignoreCookies?: boolean
+  middleware?: Array<(components: any) => Middleware>
 
   /**
    * The maximum number of bytes that will be parsed as response headers
@@ -386,7 +379,7 @@ export interface HTTPRequestOptions extends AbortOptions {
   authenticateServer?: boolean
 }
 
-export interface WebSocketInit extends HTTPRequestOptions {
+export interface ConnectInit extends HTTPRequestOptions {
   /**
    * The maximum message size to be sent or received over the socket in bytes
    *
@@ -451,6 +444,63 @@ export interface RequestHandlerOptions {
 }
 
 /**
+ * Options used to define a HTTP route that can handle requests
+ */
+export interface RouteOptions {
+  /**
+   * Specify a path to serve the protocol from. If omitted the protocol name
+   * will be used.
+   *
+   * Paths can be looked up from the protocol map using `getProtocolMap()` or by
+   * making a GET request to `/.well-known/libp2p/protocols`.
+   */
+  path?: string
+
+  /**
+   * A list of HTTP verbs this handler will respond to. If the handler is found
+   * but the request method is not present a 405 will be returned.
+   *
+   * @default ['GET']
+   */
+  method?: string | string[]
+
+  /**
+   * By default all handlers support CORS headers, pass `false` here to disallow
+   * access to fetch requests.
+   *
+   * @default true
+   */
+  cors?: boolean
+}
+
+/**
+ * A simple route that defines a handler function
+ */
+export interface HandlerRoute<H> extends RouteOptions {
+  handler: H
+}
+
+/**
+ * A route that requires initialization before use
+ */
+export interface ServiceRoute<H> extends RouteOptions {
+  init(components: any): H
+}
+
+/**
+ * A WebSocket route can make it's handler available for invocation with a
+ * pre-upgraded WebSocket object
+ */
+export interface WebSocketRoute {
+  [WEBSOCKET_HANDLER]?: WebSocketHandler
+}
+
+/**
+ * A union of the various route types
+ */
+export type HTTPRoute<H = HTTPRequestHandler> = (HandlerRoute<H> | ServiceRoute<H>) & WebSocketRoute
+
+/**
  * HTTP service interface
  */
 export interface HTTP {
@@ -475,7 +525,7 @@ export interface HTTP {
    * URLs can start with the `multiaddr:` scheme if the global URL class in the
    * runtime environment supports it.
    */
-  connect (resource: string | URL | Multiaddr | Multiaddr[], init?: WebSocketInit): Promise<WebSocket>
+  connect (resource: string | URL | Multiaddr | Multiaddr[], init?: ConnectInit): Promise<WebSocket>
 
   /**
    * Get a libp2p-enabled Agent for use with node's `http` module. This method
@@ -545,22 +595,10 @@ export interface HTTP {
 }
 
 /**
- * Parsed from the incoming HTTP message
+ * A WebServer that can accept incoming libp2p streams and transform them into
+ * an HTTP request that can be processed
  */
-export interface HeaderInfo {
-  versionMajor: number
-  versionMinor: number
-  headers: Headers
-  method: string
-  url: string
-  statusCode: number
-  statusMessage: string
-  upgrade: boolean
-  shouldKeepAlive: boolean
-  raw: Uint8ArrayList
-}
-
-export interface Endpoint {
+export interface WebServer {
   /**
    * Accept an incoming request. The headers have already been parsed, the
    * stream/connection should be transformed into whatever format the HTTP
@@ -569,29 +607,7 @@ export interface Endpoint {
   inject (info: HeaderInfo, stream: Stream, connection: Connection): Promise<void>
 }
 
-export interface RequestOptions extends AbortOptions {
-  method: string
-  headers: Headers
-  middleware: ClientMiddleware[]
-  ignoreCookies: boolean
-}
-
-/**
- * Middleware that allows augmenting the client request/response with additional
- * fields or headers.
- */
-export interface ClientMiddleware {
-  /**
-   * Called before a request is made
-   */
-  prepareRequest?(resource: URL | Multiaddr[], opts: RequestOptions): void | Promise<void>
-
-  /**
-   * Called after a request is made but before the body has been read - the
-   * processor may do any necessary housekeeping based on the server response
-   */
-  processResponse?(resource: URL | Multiaddr[], opts: RequestOptions, response: Response): void | Promise<void>
-}
+export type { MiddlewareOptions, Middleware }
 
 /**
  * Options to configure the HTTP service.
@@ -603,7 +619,7 @@ export interface HTTPInit {
   /**
    * A server that will receive incoming requests
    */
-  server?: Endpoint
+  server?: WebServer
 
   /**
    * How long in ms an auth token for a server will be valid for, defaults to
@@ -617,7 +633,7 @@ export interface HTTPInit {
    * A list of request processors that can augment requests. Middleware passed
    * here will be invoked on every outgoing request.
    */
-  middleware?: Array<(components: any) => ClientMiddleware>
+  middleware?: Array<(components: any) => Middleware>
 
   /**
    * How often to evict stale cookies from the cache in ms.
@@ -638,3 +654,6 @@ export interface HTTPInit {
 export function http (init: HTTPInit = {}): (components: HTTPComponents) => HTTP {
   return (components) => new HTTPClass(components, init)
 }
+
+export { authenticatedRoute, authenticatedWebSocketRoute } from './routes/peer-id-auth.js'
+export { webSocketRoute } from './routes/websocket.js'
