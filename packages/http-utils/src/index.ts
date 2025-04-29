@@ -4,6 +4,7 @@
  * Contains shared code and utilities used by `@libp2p/http-*` modules.
  */
 
+import { HTTPParser } from '@achingbrain/http-parser-js'
 import { InvalidParametersError, isPeerId, ProtocolError } from '@libp2p/interface'
 import { peerIdFromString } from '@libp2p/peer-id'
 import { fromStringTuples, isMultiaddr, multiaddr } from '@multiformats/multiaddr'
@@ -14,12 +15,12 @@ import itToBrowserReadableStream from 'it-to-browser-readablestream'
 import { base36 } from 'multiformats/bases/base36'
 import { base64pad } from 'multiformats/bases/base64'
 import { sha1 } from 'multiformats/hashes/sha1'
+import { Uint8ArrayList } from 'uint8arraylist'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
 import { DNS_CODECS, HTTP_CODEC, HTTP_PATH_CODEC } from './constants.js'
 import { Request } from './request.js'
 import type { AbortOptions, PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
-import type { Uint8ArrayList } from 'uint8arraylist'
 
 /**
  * A subset of options passed to middleware
@@ -482,6 +483,60 @@ export async function getServerUpgradeHeaders (headers: Headers | Record<string,
     Upgrade: 'websocket',
     Connection: 'upgrade',
     'Sec-WebSocket-Accept': webSocketAccept
+  })
+}
+
+/**
+ * Reads HTTP headers from an incoming stream
+ */
+export async function readHeaders (stream: Stream): Promise<HeaderInfo> {
+  return new Promise<any>((resolve, reject) => {
+    const parser = new HTTPParser('REQUEST')
+    const source = queuelessPushable<Uint8ArrayList>()
+    const earlyData = new Uint8ArrayList()
+    let headersComplete = false
+
+    parser[HTTPParser.kOnHeadersComplete] = (info) => {
+      headersComplete = true
+      const headers = new Headers()
+
+      // set incoming headers
+      for (let i = 0; i < info.headers.length; i += 2) {
+        headers.set(info.headers[i].toLowerCase(), info.headers[i + 1])
+      }
+
+      resolve({
+        ...info,
+        headers,
+        raw: earlyData,
+        method: HTTPParser.methods[info.method]
+      })
+    }
+
+    // replace source with request body
+    const streamSource = stream.source
+    stream.source = source
+
+    Promise.resolve().then(async () => {
+      for await (const chunk of streamSource) {
+        // only use the message parser until the headers have been read
+        if (!headersComplete) {
+          earlyData.append(chunk)
+          parser.execute(chunk.subarray())
+        } else {
+          await source.push(new Uint8ArrayList(chunk))
+        }
+      }
+
+      await source.end()
+    })
+      .catch((err: Error) => {
+        stream.abort(err)
+        reject(err)
+      })
+      .finally(() => {
+        parser.finish()
+      })
   })
 }
 

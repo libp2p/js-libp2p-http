@@ -163,14 +163,11 @@
     "release": "aegir release"
   },
   "dependencies": {
-    "@achingbrain/http-parser-js": "^0.5.9",
     "@libp2p/http-peer-id-auth": "^0.0.0",
     "@libp2p/interface": "^2.2.0",
     "@libp2p/interface-internal": "^2.0.10",
     "@multiformats/multiaddr": "^12.3.0",
     "cookie": "^1.0.2",
-    "it-queueless-pushable": "^2.0.0",
-    "uint8arraylist": "^2.4.8",
     "undici": "^6.21.2",
     "@libp2p/http-fetch": "^0.0.0",
     "@libp2p/http-websocket": "^0.0.0",

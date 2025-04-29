@@ -1,15 +1,11 @@
-import { HTTPParser } from '@achingbrain/http-parser-js'
-import { NOT_FOUND_RESPONSE, normalizeMethod, normalizeUrl, responseToStream, streamToRequest } from '@libp2p/http-utils'
+import { NOT_FOUND_RESPONSE, normalizeMethod, normalizeUrl, readHeaders, responseToStream, streamToRequest } from '@libp2p/http-utils'
 import { CLOSE_MESSAGES } from '@libp2p/http-websocket'
 import { InvalidParametersError } from '@libp2p/interface'
-import { queuelessPushable } from 'it-queueless-pushable'
-import { Uint8ArrayList } from 'uint8arraylist'
 import { HTTP_PROTOCOL, WEBSOCKET_HANDLER } from './constants.js'
 import { initializeRoute } from './routes/utils.js'
 import { wellKnownRoute } from './routes/well-known.js'
 import type { WebServer, HTTPRequestHandler, ProtocolMap, WebSocketHandler, HTTPRoute, HandlerRoute } from './index.js'
-import type { HeaderInfo } from '@libp2p/http-utils'
-import type { ComponentLogger, IncomingStreamData, Logger, Stream } from '@libp2p/interface'
+import type { ComponentLogger, IncomingStreamData, Logger } from '@libp2p/interface'
 import type { Registrar } from '@libp2p/interface-internal'
 
 export interface HTTPRegistrarComponents {
@@ -199,60 +195,6 @@ export class HTTPRegistrar {
 
     return output
   }
-}
-
-/**
- * Reads HTTP headers from an incoming stream
- */
-async function readHeaders (stream: Stream): Promise<HeaderInfo> {
-  return new Promise<any>((resolve, reject) => {
-    const parser = new HTTPParser('REQUEST')
-    const source = queuelessPushable<Uint8ArrayList>()
-    const earlyData = new Uint8ArrayList()
-    let headersComplete = false
-
-    parser[HTTPParser.kOnHeadersComplete] = (info) => {
-      headersComplete = true
-      const headers = new Headers()
-
-      // set incoming headers
-      for (let i = 0; i < info.headers.length; i += 2) {
-        headers.set(info.headers[i].toLowerCase(), info.headers[i + 1])
-      }
-
-      resolve({
-        ...info,
-        headers,
-        raw: earlyData,
-        method: HTTPParser.methods[info.method]
-      })
-    }
-
-    // replace source with request body
-    const streamSource = stream.source
-    stream.source = source
-
-    Promise.resolve().then(async () => {
-      for await (const chunk of streamSource) {
-        // only use the message parser until the headers have been read
-        if (!headersComplete) {
-          earlyData.append(chunk)
-          parser.execute(chunk.subarray())
-        } else {
-          await source.push(new Uint8ArrayList(chunk))
-        }
-      }
-
-      await source.end()
-    })
-      .catch((err: Error) => {
-        stream.abort(err)
-        reject(err)
-      })
-      .finally(() => {
-        parser.finish()
-      })
-  })
 }
 
 function addHeaders (response: Response, request: Request, handler: ProtocolHandler): void {

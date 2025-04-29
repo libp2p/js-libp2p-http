@@ -140,13 +140,17 @@
   },
   "dependencies": {
     "@achingbrain/http-parser-js": "^0.5.9",
-    "@libp2p/interface": "^2.2.0",
     "@libp2p/http-utils": "^0.0.0",
+    "@libp2p/interface": "^2.2.0",
     "it-byte-stream": "^2.0.1",
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
-    "aegir": "^45.0.0"
+    "@libp2p/logger": "^5.1.15",
+    "aegir": "^45.0.0",
+    "it-drain": "^3.0.8",
+    "it-pair": "^2.0.6",
+    "sinon-ts": "^2.0.0"
   },
   "sideEffects": false
 }

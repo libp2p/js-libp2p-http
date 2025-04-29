@@ -1,5 +1,6 @@
 import { HTTPParser } from '@achingbrain/http-parser-js'
 import { Response } from '@libp2p/http-utils'
+import { InvalidResponseError } from './errors.js'
 import type { SendRequestInit } from './index.js'
 import type { Stream } from '@libp2p/interface'
 import type { ByteStream } from 'it-byte-stream'
@@ -64,6 +65,7 @@ export async function readResponse (bytes: ByteStream<Stream>, resource: URL, in
       .then(async () => {
         let read = 0
         while (true) {
+          init.log('reading response')
           const chunk = await bytes.read({
             signal: init.signal ?? undefined
           })
@@ -78,15 +80,14 @@ export async function readResponse (bytes: ByteStream<Stream>, resource: URL, in
             }
 
             if (!headersComplete) {
-              reject(new Error(`Response ended before headers were received, read ${read} bytes`))
+              reject(new InvalidResponseError(`Response ended before headers were received, read ${read} bytes`))
             }
 
             break
           }
 
-          read += chunk.byteLength
-
           init.log('response stream read %d bytes', chunk.byteLength)
+          read += chunk.byteLength
           parser.execute(chunk.subarray(), 0, chunk.byteLength)
         }
       })

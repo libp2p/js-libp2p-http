@@ -139,6 +139,7 @@
     "release": "aegir release"
   },
   "dependencies": {
+    "@achingbrain/http-parser-js": "^0.5.9",
     "@libp2p/interface": "^2.2.0",
     "@libp2p/peer-id": "^5.0.7",
     "@multiformats/multiaddr": "^12.3.0",

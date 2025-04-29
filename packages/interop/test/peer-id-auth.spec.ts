@@ -93,7 +93,7 @@ const tests: Test[] = [{
 }]
 
 for (const test of tests) {
-  describe(`peer id auth - ${test.name}`, () => {
+  describe(`peer id auth - HTTP over libp2p - ${test.name}`, () => {
     let client: Libp2p<{ http: HTTP }>
     let listenerMultiaddrs: Multiaddr[]
 
@@ -259,56 +259,68 @@ for (const test of tests) {
       expect(response.status).to.equal(200)
       await expect(response.text()).to.eventually.equal('no-peer-id')
     })
-
-    /*
-    it('should mutually authenticate with a custom port', async () => {
-      const clientAuth = new ClientAuth(clientKey)
-      const serverAuth = new ServerAuth(serverKey, h => h === 'foobar:12345')
-
-      const fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
-        const req = new Request(input, init)
-        const resp = await serverAuth.httpHandler(req)
-        return resp
-      }
-
-      const observedServerPeerId = await clientAuth.authenticateServer('https://foobar:12345/auth', {
-        fetch
-      })
-      expect(observedServerPeerId.equals(server)).to.be.true()
-    })
-
-    it('should time out when authenticating', async () => {
-      const clientAuth = new ClientAuth(clientKey)
-
-      const controller = new AbortController()
-      controller.abort()
-
-      await expect(clientAuth.authenticateServer('https://example.com/auth', {
-        signal: controller.signal
-      })).to.eventually.be.rejected
-        .with.property('name', 'AbortError')
-    })
-
-    it('should sent request body to authenticated server', async () => {
-      const clientAuth = new ClientAuth(clientKey)
-      const serverAuth = new ServerAuth(serverKey, h => h === 'example.com')
-
-      const echoHandler = async (req: Request): Promise<Response> => {
-        return new Response(await req.text())
-      }
-      const httpHandler = serverAuth.withAuth(async (clientId, req) => { return echoHandler(req) })
-
-      const fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
-        const req = new Request(input, init)
-        return httpHandler(req)
-      }
-
-      const expectedBody = 'Only for authenticated servers!'
-      const response = await clientAuth.authenticatedFetch('https://example.com/auth', { method: 'POST', body: expectedBody, verifyPeer: (observedId) => observedId.equals(server), fetch })
-
-      expect((await response.text())).to.be.equal(expectedBody)
-      expect(response.peer.equals(server)).to.be.true()
-    })
-    */
   })
 }
+
+const HTTP_SERVERS = [{
+  name: 'node:http',
+  address: multiaddr(process.env.HTTP_NODE_HTTP_MULTIADDR)
+}, {
+  name: 'express',
+  address: multiaddr(process.env.HTTP_EXPRESS_MULTIADDR)
+}, {
+  name: 'fastify',
+  address: multiaddr(process.env.HTTP_FASTIFY_MULTIADDR)
+}]
+
+HTTP_SERVERS.forEach(test => {
+  describe(`peer id auth - libp2p over HTTP - ${test.name}`, () => {
+    let client: Libp2p<{ http: HTTP }>
+    let httpAddr: Multiaddr
+
+    beforeEach(async () => {
+      client = await getClient()
+      httpAddr = multiaddr(test.address)
+    })
+
+    afterEach(async () => {
+      await stop(client)
+    })
+
+    it('should support peer id auth', async () => {
+      const response = await client.services.http.fetch(httpAddr.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/peer-id')}`), {
+        headers: {
+          host: 'test-with-auth.com'
+        },
+        middleware: [
+          peerIdAuth()
+        ]
+      })
+      expect(response.status).to.equal(200)
+      await expect(response.text()).to.eventually.equal(client.peerId.toString())
+    })
+
+    it('should support optional peer id auth', async () => {
+      const response = await client.services.http.fetch(httpAddr.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/optional-peer-id')}`), {
+        headers: {
+          host: 'test-with-auth.com'
+        },
+        middleware: [
+          peerIdAuth()
+        ]
+      })
+      expect(response.status).to.equal(200)
+      await expect(response.text()).to.eventually.equal(client.peerId.toString())
+    })
+
+    it('should support optional peer id auth without auth', async () => {
+      const response = await client.services.http.fetch(httpAddr.encapsulate(`/http-path/${encodeURIComponent('libp2p/http/optional-peer-id')}`), {
+        headers: {
+          host: 'test-with-auth.com'
+        }
+      })
+      expect(response.status).to.equal(200)
+      await expect(response.text()).to.eventually.equal('no-peer-id')
+    })
+  })
+})

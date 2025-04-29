@@ -90,7 +90,7 @@ const tests: Test[] = [{
 }]
 
 for (const test of tests) {
-  describe.only(`cookies - ${test.name}`, () => {
+  describe(`cookies - ${test.name}`, () => {
     let client: Libp2p<{ http: HTTP }>
     let listenerMultiaddrs: Multiaddr[]
 
