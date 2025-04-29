@@ -3,7 +3,7 @@ import { InvalidMessageError } from '@libp2p/interface'
 import { toString as uint8ArrayToString } from 'uint8arrays'
 import { isClientChallenge, isOpaqueData, isServerChallengeResponse, issueBearerToken, respondToClientChallenge, respondToServerChallengeResponse, unwrapBearerToken } from './server.js'
 import { decodeAuthorizationHeader, encodeAuthParams, generateChallenge, genOpaque } from './utils.js'
-import type { AbortOptions, PeerId, PrivateKey, PublicKey } from '@libp2p/interface'
+import type { AbortOptions, PeerId, PrivateKey } from '@libp2p/interface'
 
 export * from './errors.js'
 
@@ -98,7 +98,7 @@ export interface VerifyClientChallengeResponseOptions extends AbortOptions {
   tokenTTL?: number
 }
 
-export async function createServerChallenge (hostname: string, serverKey: PrivateKey, clientPublicKey?: PublicKey): Promise<string> {
+export async function createServerChallenge (hostname: string, serverKey: PrivateKey): Promise<string> {
   const challenge = generateChallenge()
 
   return encodeAuthParams({
@@ -106,7 +106,6 @@ export async function createServerChallenge (hostname: string, serverKey: Privat
     'public-key': uint8ArrayToString(publicKeyToProtobuf(serverKey.publicKey), 'base64urlpad'),
     opaque: await genOpaque(serverKey, {
       challengeClient: challenge,
-      clientPublicKey: clientPublicKey != null ? uint8ArrayToString(publicKeyToProtobuf(clientPublicKey), 'base64urlpad') : undefined,
       hostname,
       creationTime: Date.now()
     })

@@ -2,7 +2,7 @@ import { publicKeyFromProtobuf, publicKeyToProtobuf } from '@libp2p/crypto/keys'
 import { InvalidMessageError } from '@libp2p/interface'
 import { peerIdFromPublicKey, peerIdFromString } from '@libp2p/peer-id'
 import { toString as uint8ArrayToString, fromString as uint8ArrayFromString } from 'uint8arrays'
-import { encodeAuthParams, genBearerToken, genOpaque, sign, unwrapOpaque, verify, verifyBox } from './utils.js'
+import { encodeAuthParams, genBearerToken, genOpaque, generateChallenge, sign, unwrapOpaque, verify, verifyBox } from './utils.js'
 import { validateOpaqueData } from './validation.js'
 import { DEFAULT_AUTH_TOKEN_TTL, PEER_ID_AUTH_SCHEME } from './index.js'
 import type { BearerTokenHeader, ClientChallengeHeader, OpaqueDataHeader, ServerChallengeResponseHeader, ServerResponse } from './index.js'
@@ -72,14 +72,16 @@ export async function respondToClientChallenge (clientChallenge: ClientChallenge
     ['hostname', hostname]
   ])
 
+  const challenge = generateChallenge()
+
   return {
     peerId: clientPeerId,
     authenticate: encodeAuthParams({
-      'challenge-client': clientChallenge['challenge-server'],
+      'challenge-client': challenge,
       'public-key': uint8ArrayToString(publicKeyToProtobuf(serverKey.publicKey), 'base64urlpad'),
       sig: uint8ArrayToString(sig, 'base64urlpad'),
       opaque: await genOpaque(serverKey, {
-        challengeClient: clientChallenge['challenge-server'],
+        challengeClient: challenge,
         creationTime: Date.now(),
         hostname,
         clientPublicKey: clientChallenge['public-key']

@@ -8,14 +8,16 @@ export async function createFastifyWebSocket (server: Server, handled?: CanHandl
   const app = fastify({
     serverFactory: (app, opts) => {
       server.addListener('request', (req, res) => {
-        if (handled?.(req, res) !== true) {
-          res.setHeader('Access-Control-Allow-Origin', '*')
-          res.setHeader('Access-Control-Request-Method', '*')
-          res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
-          res.setHeader('Access-Control-Allow-Headers', '*')
-
-          app(req, res)
+        if (handled?.(req, res) === true) {
+          return
         }
+
+        res.setHeader('Access-Control-Allow-Origin', '*')
+        res.setHeader('Access-Control-Request-Method', '*')
+        res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
+        res.setHeader('Access-Control-Allow-Headers', '*')
+
+        app(req, res)
       })
 
       return server

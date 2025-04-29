@@ -77,11 +77,11 @@ function genDataToSign (prefix: string, partsToSign: Array<[string, string | Uin
 
 export function decodeAuthorizationHeader (header: string): unknown {
   if (header.length < PEER_ID_AUTH_SCHEME.length + 1) {
-    throw new InvalidMessageError('Serialized token too short')
+    throw new InvalidMessageError('Authorization header too short')
   }
 
   if (header.length > MAX_AUTH_HEADER_SIZE) {
-    throw new InvalidMessageError('Serialized token too long')
+    throw new InvalidMessageError('Authorization header too long')
   }
 
   if (!header.includes(PEER_ID_AUTH_SCHEME)) {

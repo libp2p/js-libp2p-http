@@ -170,7 +170,7 @@ export class ClientInitiatedHandshake {
     const marshalledClientPubKey = publicKeyToProtobuf(this.clientKey.publicKey)
 
     const valid = await verify(serverPublicKey, PEER_ID_AUTH_SCHEME, [
-      ['challenge-server', message['challenge-client']],
+      ['challenge-server', this.challenge],
       ['client-public-key', marshalledClientPubKey],
       ['hostname', this.hostname]
     ], uint8ArrayFromString(message.sig, 'base64urlpad'))

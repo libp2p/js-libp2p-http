@@ -63,8 +63,8 @@ export class ConnectionEvent extends Event {
  * wss.addEventListener('connection', (evt) => {
  *   const ws = evt.webSocket
  *
- *   ws.on('message', (data) => {
- *     ws.send(data)
+ *   ws.addEventListener('message', (evt) => {
+ *     ws.send(evt.data)
  *   })
  * })
  *

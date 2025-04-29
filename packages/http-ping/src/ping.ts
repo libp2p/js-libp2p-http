@@ -1,11 +1,10 @@
 import { authenticatedWebSocketRoute } from '@libp2p/http'
-import { toMultiaddrs } from '@libp2p/http-utils'
 import { ProtocolError, serviceDependencies } from '@libp2p/interface'
 import { raceEvent } from 'race-event'
 import { raceSignal } from 'race-signal'
 import { equals as uint8ArrayEquals } from 'uint8arrays/equals'
 import { HTTP_PING_PROTOCOL } from './index.js'
-import type { PingHTTPComponents, PingHTTP as PingHTTPInterface, PingHTTPOptions, PingWebSocketOptions } from './index.js'
+import type { PingHTTPComponents, PingHTTPInit, PingHTTP as PingHTTPInterface, PingHTTPOptions, PingWebSocketOptions } from './index.js'
 import type { Logger, PeerId, Startable } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
@@ -14,10 +13,12 @@ const PING_SIZE = 32
 export class PingHTTPService implements PingHTTPInterface, Startable {
   private readonly components: PingHTTPComponents
   private readonly log: Logger
+  private readonly init: PingHTTPInit
 
-  constructor (components: PingHTTPComponents) {
+  constructor (components: PingHTTPComponents, init: PingHTTPInit = {}) {
     this.components = components
     this.log = components.logger.forComponent('libp2p:http:ping')
+    this.init = init
 
     this.onHTTPRequest = this.onHTTPRequest.bind(this)
     this.onWebSocket = this.onWebSocket.bind(this)
@@ -31,7 +32,8 @@ export class PingHTTPService implements PingHTTPInterface, Startable {
 
   start (): void {
     this.components.http.handle(HTTP_PING_PROTOCOL, authenticatedWebSocketRoute({
-      requireAuth: false,
+      ...this.init,
+      requireAuth: this.init.requireAuth ?? false,
       method: ['GET', 'POST'],
       handler: this.onWebSocket,
       fallback: this.onHTTPRequest
@@ -83,21 +85,14 @@ export class PingHTTPService implements PingHTTPInterface, Startable {
     })
   }
 
-  async ping (peer: PeerId | Multiaddr | Multiaddr[], options: PingHTTPOptions | PingWebSocketOptions = {}): Promise<number> {
-    const pingEndpoint = await this.components.http.getProtocolPath(peer, HTTP_PING_PROTOCOL, {
-      ...options,
-      signal: options.signal ?? undefined
-    })
-    const dialTarget = toMultiaddrs(peer)
-      .map(ma => ma.encapsulate(`/http-path/${encodeURIComponent(pingEndpoint.substring(1))}`))
-
+  async ping (peer: string | URL | PeerId | Multiaddr | Multiaddr[], options: PingHTTPOptions | PingWebSocketOptions = {}): Promise<number> {
     const start = Date.now()
     const buf = new Uint8Array(PING_SIZE)
     // fill buffer with random data
     crypto.getRandomValues(buf)
 
     this.log('ping %s', peer)
-    const output = await raceSignal(isPingWebSocketOptions(options) ? this.webSocketPing(dialTarget, buf, options) : this.httpPing(dialTarget, buf, options), options?.signal ?? undefined)
+    const output = await raceSignal(isPingWebSocketOptions(options) ? this.webSocketPing(peer, buf, options) : this.httpPing(peer, buf, options), options?.signal ?? undefined)
     const respBuf = new Uint8Array(output, 0, output.byteLength)
 
     if (respBuf.length !== PING_SIZE) {
@@ -111,8 +106,8 @@ export class PingHTTPService implements PingHTTPInterface, Startable {
     return Date.now() - start
   }
 
-  async httpPing (dialTarget: Multiaddr[], buf: Uint8Array, options: PingHTTPOptions): Promise<ArrayBuffer> {
-    const res = await this.components.http.fetch(dialTarget, {
+  async httpPing (peer: string | URL | PeerId | Multiaddr | Multiaddr[], buf: Uint8Array, options: PingHTTPOptions): Promise<ArrayBuffer> {
+    const res = await this.components.http.fetchProtocol(peer, HTTP_PING_PROTOCOL, {
       ...options,
       method: 'POST',
       body: buf,
@@ -126,34 +121,33 @@ export class PingHTTPService implements PingHTTPInterface, Startable {
     return res.arrayBuffer()
   }
 
-  async webSocketPing (dialTarget: Multiaddr[], buf: Uint8Array, options: PingHTTPOptions): Promise<ArrayBuffer> {
-    this.log('opening websocket connection to %a', dialTarget)
-    const socket = await this.components.http.connect(dialTarget, {
+  async webSocketPing (peer: string | URL | PeerId | Multiaddr | Multiaddr[], buf: Uint8Array, options: PingHTTPOptions): Promise<ArrayBuffer> {
+    const socket = await this.components.http.connectProtocol(peer, HTTP_PING_PROTOCOL, {
       ...options,
       signal: options.signal ?? undefined
     })
 
     if (socket.readyState !== WebSocket.OPEN) {
       await raceEvent(socket, 'open', options.signal ?? undefined)
-      this.log('websocket connection to %a open', dialTarget)
+      this.log('websocket connection to %s open', peer)
     }
 
     const p = new Promise<ArrayBuffer>((resolve, reject) => {
       socket.addEventListener('message', (evt) => {
-        this.log('received ping response from %a', dialTarget)
+        this.log('received ping response from %s', peer)
         resolve(evt.data)
       })
       socket.addEventListener('error', (evt: any) => {
-        this.log('ping to %a errored - %e', dialTarget, evt.error ?? evt)
+        this.log('ping to %s errored - %e', peer, evt.error ?? evt)
         reject(new Error('An error occurred'))
       })
       socket.addEventListener('close', () => {
-        this.log('ping to %a closed prematurely - %e', dialTarget)
+        this.log('ping to %a closed prematurely', peer)
         reject(new Error('The WebSocket was closed before the pong was received'))
       })
     })
 
-    this.log('send ping message to %a', dialTarget)
+    this.log('send ping message to %s', peer)
     socket.send(buf)
 
     return p

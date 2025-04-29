@@ -1,5 +1,5 @@
 import { fetch } from '@libp2p/http-fetch'
-import { getHeaders, getHost, stripHTTPPath, toMultiaddrs, toResource } from '@libp2p/http-utils'
+import { getHeaders, getHost, stripHTTPPath, toResource } from '@libp2p/http-utils'
 import { WebSocket } from '@libp2p/http-websocket'
 import { UnsupportedOperationError, serviceCapabilities, start, stop } from '@libp2p/interface'
 import { HTTP_PROTOCOL } from './constants.js'
@@ -11,7 +11,7 @@ import { WELL_KNOWN_PROTOCOLS_PATH } from './index.js'
 import type { HTTPInit, HTTP as HTTPInterface, ProtocolMap, FetchInit, HTTPRoute, ConnectInit, MiddlewareOptions } from './index.js'
 import type { ComponentLogger, Logger, PeerId, PrivateKey, Startable } from '@libp2p/interface'
 import type { ConnectionManager, Registrar } from '@libp2p/interface-internal'
-import type { Multiaddr } from '@multiformats/multiaddr'
+import type { AbortOptions, Multiaddr } from '@multiformats/multiaddr'
 
 export interface HTTPComponents {
   privateKey: PrivateKey
@@ -61,7 +61,7 @@ export class HTTP implements HTTPInterface, Startable {
     throw new UnsupportedOperationError('This method is not supported in browsers')
   }
 
-  async connect (resource: string | URL | Multiaddr | Multiaddr[], init: ConnectInit = {}): Promise<globalThis.WebSocket> {
+  async connect (resource: string | URL | PeerId | Multiaddr | Multiaddr[], init: ConnectInit = {}): Promise<globalThis.WebSocket> {
     const url = toResource(resource)
     const headers = getHeaders(init)
     const opts: MiddlewareOptions = {
@@ -94,7 +94,7 @@ export class HTTP implements HTTPInterface, Startable {
     })
   }
 
-  async fetch (resource: string | URL | Multiaddr | Multiaddr[], init: FetchInit = {}): Promise<Response> {
+  async fetch (resource: string | URL | PeerId | Multiaddr | Multiaddr[], init: FetchInit = {}): Promise<Response> {
     const url = toResource(resource)
     const opts: MiddlewareOptions = {
       ...init,
@@ -114,13 +114,28 @@ export class HTTP implements HTTPInterface, Startable {
     return processResponse(url, opts, response)
   }
 
-  async getSupportedProtocols (peer: PeerId | Multiaddr | Multiaddr[]): Promise<ProtocolMap> {
-    const addresses = toMultiaddrs(peer, `/http-path/${encodeURIComponent(WELL_KNOWN_PROTOCOLS_PATH.substring(1))}`)
-    const resp = await this.fetch(addresses, {
+  async connectProtocol (resource: string | URL | PeerId | Multiaddr | Multiaddr[], protocol: string, init?: ConnectInit): Promise<globalThis.WebSocket> {
+    const path = await this.getProtocolPath(resource, protocol, init)
+    const url = toResource(resource, path)
+
+    return this.connect(url, init)
+  }
+
+  async fetchProtocol (resource: string | URL | PeerId | Multiaddr | Multiaddr[], protocol: string, init: FetchInit = {}): Promise<Response> {
+    const path = await this.getProtocolPath(resource, protocol, init)
+    const url = toResource(resource, path)
+
+    return this.fetch(url, init)
+  }
+
+  async getSupportedProtocols (resource: string | URL | PeerId | Multiaddr | Multiaddr[], options: AbortOptions = {}): Promise<ProtocolMap> {
+    const url = toResource(resource, WELL_KNOWN_PROTOCOLS_PATH)
+    const resp = await this.fetch(url, {
       method: 'GET',
       headers: {
         Accept: 'application/json'
-      }
+      },
+      signal: options.signal
     })
 
     if (resp.status !== 200) {
@@ -130,8 +145,8 @@ export class HTTP implements HTTPInterface, Startable {
     return resp.json()
   }
 
-  async getProtocolPath (peer: PeerId | Multiaddr, protocol: string): Promise<string> {
-    const peerMeta = await this.getSupportedProtocols(peer)
+  async getProtocolPath (peer: string | URL | PeerId | Multiaddr | Multiaddr[], protocol: string, options: AbortOptions = {}): Promise<string> {
+    const peerMeta = await this.getSupportedProtocols(peer, options)
 
     if (peerMeta[protocol] == null) {
       throw new Error(`Peer does not serve protocol: ${protocol}`)

@@ -28,13 +28,15 @@ export function createHttp (server: Server, handled?: CanHandle): Server {
   }
 
   server.on('request', (req, res) => {
-    if (handled?.(req, res) !== true) {
-      res.setHeader('Access-Control-Allow-Origin', req.headers.origin ?? '*')
-      res.setHeader('Access-Control-Allow-Methods', ['OPTIONS', req.headers['access-control-request-method'] ?? ''])
-      res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] ?? '*')
-
-      app(req, res)
+    if (handled?.(req, res) === true) {
+      return
     }
+
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin ?? '*')
+    res.setHeader('Access-Control-Allow-Methods', ['OPTIONS', req.headers['access-control-request-method'] ?? ''])
+    res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] ?? '*')
+
+    app(req, res)
   })
 
   return server

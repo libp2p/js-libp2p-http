@@ -4,11 +4,18 @@ import type { HeaderInfo } from '@libp2p/http-utils'
 import type { Stream, Connection } from '@libp2p/interface'
 import type { Socket } from 'node:net'
 
+/**
+ * A connection handler can emit connection events - this is all of the Node.js
+ * http.Server API that will be used.
+ */
 export interface ConnectionHandler {
   emit (event: 'connection', socket: Socket): void
 }
 
 export interface NodeServerInit {
+  /**
+   * Normally this would be an instance of `http.Server` from `node:http`
+   */
   server: ConnectionHandler
 }
 

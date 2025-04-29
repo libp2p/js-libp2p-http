@@ -5,6 +5,20 @@ import type { Multiaddr } from '@multiformats/multiaddr'
 
 export const HTTP_PING_PROTOCOL = '/http-ping/1'
 
+export interface PingHTTPInit {
+  /**
+   * The path that the ping protocol will listen on
+   */
+  path?: string
+
+  /**
+   * Whether authentication is required
+   *
+   * @default false
+   */
+  requireAuth?: boolean
+}
+
 export interface PingHTTPComponents {
   http: HTTP
   logger: ComponentLogger
@@ -21,9 +35,9 @@ export interface PingWebSocketOptions extends ConnectInit {
 }
 
 export interface PingHTTP {
-  ping (peer: PeerId | Multiaddr | Multiaddr[], options?: PingHTTPOptions | PingWebSocketOptions): Promise<number>
+  ping (peer: string | URL | PeerId | Multiaddr | Multiaddr[], options?: PingHTTPOptions | PingWebSocketOptions): Promise<number>
 }
 
-export function pingHTTP (): (components: PingHTTPComponents) => PingHTTP {
-  return (components) => new PingHTTPServiceClass(components)
+export function pingHTTP (init: PingHTTPInit = {}): (components: PingHTTPComponents) => PingHTTP {
+  return (components) => new PingHTTPServiceClass(components, init)
 }

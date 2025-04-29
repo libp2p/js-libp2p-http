@@ -352,6 +352,7 @@ import type { Agent, AgentOptions, IncomingMessage } from 'node:http'
 import type { Dispatcher, Agent as UnidiciAgent } from 'undici'
 
 export { WELL_KNOWN_PROTOCOLS_PATH } from './routes/well-known.js'
+export { HTTP_PROTOCOL } from './constants.js'
 
 /**
  * Options used to control Fetch request and the initial WebSocket upgrade
@@ -514,7 +515,7 @@ export interface HTTP {
    * URLs can start with the `multiaddr:` scheme if the global URL class in the
    * runtime environment supports it.
    */
-  fetch(resource: string | URL | Multiaddr | Multiaddr[], init?: FetchInit): Promise<Response>
+  fetch(resource: string | URL | PeerId | Multiaddr | Multiaddr[], init?: FetchInit): Promise<Response>
 
   /**
    * Open a WebSocket connection to an HTTP server over libp2p.
@@ -525,7 +526,7 @@ export interface HTTP {
    * URLs can start with the `multiaddr:` scheme if the global URL class in the
    * runtime environment supports it.
    */
-  connect (resource: string | URL | Multiaddr | Multiaddr[], init?: ConnectInit): Promise<WebSocket>
+  connect (resource: string | URL | PeerId | Multiaddr | Multiaddr[], init?: ConnectInit): Promise<WebSocket>
 
   /**
    * Get a libp2p-enabled Agent for use with node's `http` module. This method
@@ -546,17 +547,19 @@ export interface HTTP {
   dispatcher (peer: PeerId | Multiaddr | Multiaddr[], options?: UnidiciAgent.Options): Dispatcher
 
   /**
-   * Uses the peer's .well-known endpoint to find where it hosts a given
-   * protocol.
+   * Look up the path for the protocol and invoke it with the passed arguments.
    *
-   * Throws an error if the peer does not serve the protocol.
+   * This is similar in scope to `libp2p.dialProtocol`.
    */
-  getProtocolPath (peer: PeerId | Multiaddr | Multiaddr[], protocol: string, options?: AbortOptions): Promise<string>
+  fetchProtocol(resource: string | URL | PeerId | Multiaddr | Multiaddr[], protocol: string, init?: FetchInit): Promise<Response>
 
   /**
-   * Get the .well-known protocols for a peer
+   * Look up the path for the protocol and create a WebSocket connection to the
+   * handler.
+   *
+   * This is similar in scope to `libp2p.dialProtocol`.
    */
-  getSupportedProtocols (peer: PeerId | Multiaddr | Multiaddr[], options?: AbortOptions): Promise<ProtocolMap>
+  connectProtocol(resource: string | URL | PeerId | Multiaddr | Multiaddr[], protocol: string, init?: ConnectInit): Promise<WebSocket>
 
   /**
    * Register a listener for a HTTP protocol

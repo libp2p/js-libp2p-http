@@ -172,32 +172,6 @@ export const NOT_IMPLEMENTED_ERROR = uint8ArrayFromString([
   ''
 ].join('\r\n'))
 
-/**
- * Normalizes the dial target to a list of multiaddrs with an optionally
- * encapsulated suffix
- */
-export function toMultiaddrs (peer: PeerId | Multiaddr | Multiaddr[], suffix?: string): Multiaddr[] {
-  let mas: Multiaddr[]
-
-  if (isPeerId(peer)) {
-    mas = [
-      multiaddr(`/p2p/${peer}`)
-    ]
-  } else if (Array.isArray(peer)) {
-    mas = peer
-  } else {
-    mas = [
-      peer
-    ]
-  }
-
-  if (suffix != null) {
-    mas = mas.map(ma => ma.encapsulate(suffix))
-  }
-
-  return mas
-}
-
 export function writeHeaders (headers: Headers): string[] {
   const output = []
 
@@ -244,13 +218,17 @@ async function * takeBytes (source: AsyncGenerator<Uint8ArrayList>, bytes?: numb
  * The returned URL should be handled by the global fetch, the multiaddr(s)
  * should be handled by libp2p.
  */
-export function toResource (resource: string | URL | Multiaddr | Multiaddr[]): URL | Multiaddr[] {
+export function toResource (resource: string | URL | PeerId | Multiaddr | Multiaddr[], path?: string): URL | Multiaddr[] {
   if (typeof resource === 'string') {
     if (resource.startsWith('/')) {
       resource = multiaddr(resource)
     } else {
       resource = new URL(resource)
     }
+  }
+
+  if (isPeerId(resource)) {
+    resource = multiaddr(`/p2p/${resource}`)
   }
 
   if (resource instanceof URL) {
@@ -270,12 +248,20 @@ export function toResource (resource: string | URL | Multiaddr | Multiaddr[]): U
 
       if (stringTuples.find(([codec]) => codec === HTTP_CODEC) != null) {
         const uri = multiaddrToUri(ma)
-        return new URL(uri)
+        return new URL(`${uri}${path ?? ''}`)
       }
     }
   }
 
-  return resource
+  if (path == null) {
+    return resource
+  }
+
+  if (resource instanceof URL) {
+    return new URL(`${resource}${path.substring(1)}`)
+  }
+
+  return resource.map(ma => ma.encapsulate(`/http-path/${encodeURIComponent(path.substring(1))}`))
 }
 
 export function getHeaders (init: RequestInit = {}): Headers {
@@ -310,6 +296,7 @@ function isValidHost (host?: string): host is string {
   return host != null && host !== ''
 }
 
+// eslint-disable-next-line complexity
 export function getHost (addresses: URL | Multiaddr[], headers: Headers): string {
   let host: string | undefined
   let port = 80
@@ -358,6 +345,18 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
     }
   }
 
+  // try use network host as domain
+  if (!isValidHost(host) && Array.isArray(addresses)) {
+    for (const address of addresses) {
+      try {
+        const options = address.toOptions()
+
+        host = options.host
+        break
+      } catch {}
+    }
+  }
+
   if (isValidHost(host)) {
     // add port if not standard
     if (protocol === 'http:' && port !== 80) {
@@ -371,7 +370,7 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
     return host
   }
 
-  throw new InvalidParametersError('Could not determine request host name - a request must have a host header, be made to a DNS-based multiaddr or an http(s) URL')
+  throw new InvalidParametersError('Could not determine request host name - a request must have a host header, be made to a DNS or IP-based multiaddr or an http(s) URL')
 }
 
 export function stripHTTPPath (addresses: Multiaddr[]): { httpPath: string, addresses: Multiaddr[] } {

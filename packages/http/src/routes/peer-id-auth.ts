@@ -4,7 +4,7 @@ import { WEBSOCKET_HANDLER } from '../constants.js'
 import { initializeRoute } from './utils.js'
 import { webSocketRoute } from './websocket.js'
 import type { HTTPRoute, HandlerRoute } from '../index.js'
-import type { ComponentLogger, Logger, PeerId, PrivateKey, PublicKey } from '@libp2p/interface'
+import type { ComponentLogger, Logger, PeerId, PrivateKey } from '@libp2p/interface'
 
 export const DEFAULT_AUTH_TOKEN_TTL = 60 * 60 * 1000 // 1 hour
 
@@ -64,18 +64,21 @@ export class PeerIdAuth {
       const result = await serverResponds(authHeader, hostname, this.components.privateKey, this.tokenTTL)
       const headers = new Headers()
 
+      let status = 200
+
       if (result.info != null) {
         headers.set('authentication-info', result.info)
         headers.set('access-control-expose-headers', 'authentication-info')
       }
 
       if (result.authenticate != null) {
+        status = 401
         headers.set('www-authenticate', result.authenticate)
         headers.set('access-control-expose-headers', 'www-authenticate')
       }
 
       return {
-        status: 200,
+        status,
         headers,
         peer: result.peerId
       }
@@ -94,11 +97,11 @@ export class PeerIdAuth {
     }
   }
 
-  private async returnChallenge (hostname: string, clientPublicKey?: PublicKey): Promise<AuthenticationResult> {
+  private async returnChallenge (hostname: string): Promise<AuthenticationResult> {
     return {
       status: 401,
       headers: new Headers({
-        'www-authenticate': await createServerChallenge(hostname, this.components.privateKey, clientPublicKey),
+        'www-authenticate': await createServerChallenge(hostname, this.components.privateKey),
         'access-control-expose-headers': 'www-authenticate'
       })
     }
@@ -119,6 +122,15 @@ export interface AuthenticationOptions {
    * incoming request is valid and supported
    */
   verifyHostname?(hostname: string): boolean | Promise<boolean>
+
+  /**
+   * If true the request will be rejected if the client does not supply an
+   * `Authorization` header, pass `false` here to attempt to verify the client
+   * but allow the request to proceed if it fails
+   *
+   * @default true
+   */
+  requireAuth?: boolean
 }
 
 export interface OptionalAuthenticationOptions extends AuthenticationOptions {
@@ -199,7 +211,7 @@ async function authenticate (req: Request, authResult: AuthenticationResult, han
 async function authenticate (req: Request, authResult: AuthenticationResult, handlerMethods: string[], next: AuthenticatedHandler | OptionallyAuthenticatedHandler): Promise<Response> {
   const authIsOptional = isOptionalAuth(next)
 
-  if (!authIsOptional && authResult.peer == null) {
+  if (!authIsOptional && (authResult.peer == null || authResult.status !== 200)) {
     return new Response(undefined, {
       status: authResult.status,
       headers: authResult.headers

@@ -188,6 +188,10 @@ export class HTTPRegistrar {
     const output: ProtocolMap = {}
 
     for (const p of this.protocols) {
+      if (p.protocol === '') {
+        continue
+      }
+
       output[p.protocol] = {
         path: p.route.path
       }

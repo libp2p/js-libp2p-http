@@ -1,0 +1,24 @@
+{
+  "name": "@libp2p/http-example-hono-server-over-libp2p",
+  "version": "1.0.0",
+  "private": true,
+  "description": "How to serve a hono app over libp2p streams",
+  "license": "Apache-2.0 OR MIT",
+  "type": "module",
+  "scripts": {
+    "test": "test-node-example test/*"
+  },
+  "dependencies": {
+    "@chainsafe/libp2p-noise": "^16.1.3",
+    "@chainsafe/libp2p-yamux": "^7.0.1",
+    "@libp2p/http": "0.0.0",
+    "@libp2p/http-server": "0.0.0",
+    "@libp2p/tcp": "^10.1.10",
+    "@multiformats/multiaddr": "^12.4.0",
+    "hono": "^4.7.8",
+    "libp2p": "^2.8.5"
+  },
+  "devDependencies": {
+    "test-ipfs-example": "^1.0.0"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@libp2p/http-example-peer-id-auth",
+  "version": "1.0.0",
+  "private": true,
+  "description": "How to authenticate peers over HTTP",
+  "license": "Apache-2.0 OR MIT",
+  "type": "module",
+  "scripts": {
+    "test": "test-node-example test/*"
+  },
+  "dependencies": {
+    "@libp2p/http": "0.0.0",
+    "@libp2p/http-server": "0.0.0",
+    "@multiformats/multiaddr": "^12.4.0",
+    "libp2p": "^2.8.5"
+  },
+  "devDependencies": {
+    "test-ipfs-example": "^1.0.0"
+  }
+}
