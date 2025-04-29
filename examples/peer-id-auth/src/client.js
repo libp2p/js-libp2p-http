@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 
-import { createLibp2p } from 'libp2p'
 import { http } from '@libp2p/http'
 import { peerIdAuth } from '@libp2p/http/middleware'
+import { createLibp2p } from 'libp2p'
 
 // create a libp2p node that can act as a client
 const node = await createLibp2p({

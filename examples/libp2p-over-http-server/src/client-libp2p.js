@@ -1,7 +1,9 @@
-import { createLibp2p } from 'libp2p'
-import { HTTP_TEST_PROTOCOL } from './common.js'
+/* eslint-disable no-console */
+
 import { http } from '@libp2p/http'
 import { pingHTTP } from '@libp2p/http-ping'
+import { createLibp2p } from 'libp2p'
+import { HTTP_TEST_PROTOCOL } from './common.js'
 
 // Take the first argument as the path of the folder to add
 const args = process.argv.slice(2)

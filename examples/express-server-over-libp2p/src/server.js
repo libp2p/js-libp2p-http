@@ -1,11 +1,13 @@
-import { createLibp2p } from 'libp2p'
-import { tcp } from '@libp2p/tcp'
+/* eslint-disable no-console */
+
+import { createServer } from 'node:http'
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
-import express from 'express'
 import { http } from '@libp2p/http'
 import { nodeServer } from '@libp2p/http-server'
-import { createServer } from 'node:http'
+import { tcp } from '@libp2p/tcp'
+import express from 'express'
+import { createLibp2p } from 'libp2p'
 
 // this express app is where any business logic necessary to server HTTP
 // resources will take place

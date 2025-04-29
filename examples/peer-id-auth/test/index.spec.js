@@ -9,7 +9,7 @@ await execa('go', ['build', '-o', 'go-node', 'main.go'], {
 })
 
 // Step 1 start go server
-process.stdout.write(`./go-peer/go-node\n`)
+process.stdout.write('./go-peer/go-node\n')
 
 const {
   process: goServer
@@ -18,7 +18,7 @@ const {
 process.stdout.write('==================================================================\n')
 
 // Step 2 start js client
-process.stdout.write(`node src/client.js\n`)
+process.stdout.write('node src/client.js\n')
 
 const {
   process: jsClient
@@ -30,7 +30,7 @@ jsClient.kill()
 goServer.kill()
 
 // Step 1 start go server
-process.stdout.write(`./go-peer/go-node\n`)
+process.stdout.write('./go-peer/go-node\n')
 
 const {
   process: jsServer
@@ -39,7 +39,7 @@ const {
 process.stdout.write('==================================================================\n')
 
 // Step 2 start js client
-process.stdout.write(`node src/client.js\n`)
+process.stdout.write('node src/client.js\n')
 
 const {
   process: goClient

@@ -1,15 +1,17 @@
-import { createLibp2p } from 'libp2p'
+/* eslint-disable no-console */
+
+import { createServer } from 'node:net'
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { circuitRelayServer, circuitRelayTransport } from '@libp2p/circuit-relay-v2'
-import { identify } from '@libp2p/identify'
-import { createServer } from 'node:net'
-import { multiaddr } from '@multiformats/multiaddr'
 import { HTTP_PROTOCOL } from '@libp2p/http'
-import { byteStream } from 'it-byte-stream'
+import { identify } from '@libp2p/identify'
+import { ping } from '@libp2p/ping'
 import { webRTC } from '@libp2p/webrtc'
 import { webSockets } from '@libp2p/websockets'
-import { ping } from '@libp2p/ping'
+import { multiaddr } from '@multiformats/multiaddr'
+import { byteStream } from 'it-byte-stream'
+import { createLibp2p } from 'libp2p'
 
 const args = process.argv.slice(2)
 

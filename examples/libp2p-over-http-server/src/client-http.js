@@ -1,6 +1,8 @@
-import { HTTP_TEST_PROTOCOL } from './common.js'
+/* eslint-disable no-console */
+
 import { WELL_KNOWN_PROTOCOLS_PATH } from '@libp2p/http'
 import { HTTP_PING_PROTOCOL } from '@libp2p/http-ping'
+import { HTTP_TEST_PROTOCOL } from './common.js'
 
 // Take the first argument as the path of the folder to add
 const args = process.argv.slice(2)

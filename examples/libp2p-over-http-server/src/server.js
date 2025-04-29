@@ -1,8 +1,10 @@
-import { createLibp2p } from 'libp2p'
+/* eslint-disable no-console */
+
+import { createServer } from 'node:http'
 import { http } from '@libp2p/http'
 import { pingHTTP } from '@libp2p/http-ping'
 import { canHandle } from '@libp2p/http-server/node'
-import { createServer } from 'node:http'
+import { createLibp2p } from 'libp2p'
 import { HTTP_TEST_PROTOCOL } from './common.js'
 
 // create a libp2p node with a HTTP service that can serve arbitrary HTTP

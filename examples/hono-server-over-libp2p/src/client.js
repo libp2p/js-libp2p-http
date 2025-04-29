@@ -1,9 +1,11 @@
-import { createLibp2p } from 'libp2p'
-import { tcp } from '@libp2p/tcp'
+/* eslint-disable no-console */
+
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { http } from '@libp2p/http'
+import { tcp } from '@libp2p/tcp'
 import { multiaddr } from '@multiformats/multiaddr'
+import { createLibp2p } from 'libp2p'
 
 // Take the first argument as the path of the folder to add
 const args = process.argv.slice(2)

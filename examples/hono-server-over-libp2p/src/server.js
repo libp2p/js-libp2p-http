@@ -1,10 +1,12 @@
-import { createLibp2p } from 'libp2p'
-import { tcp } from '@libp2p/tcp'
+/* eslint-disable no-console */
+
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
-import { Hono } from 'hono'
 import { http } from '@libp2p/http'
 import { fetchServer } from '@libp2p/http-server'
+import { tcp } from '@libp2p/tcp'
+import { Hono } from 'hono'
+import { createLibp2p } from 'libp2p'
 
 // this Hono app is where any business logic necessary to server HTTP
 // resources will take place

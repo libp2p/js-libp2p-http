@@ -1,11 +1,11 @@
 /* eslint-disable no-console */
 
-import { createLibp2p } from 'libp2p'
+import { createServer } from 'node:http'
 import { http } from '@libp2p/http'
 import { authenticatedRoute } from '@libp2p/http/routes'
-import { canHandle } from '@libp2p/http-server/node'
-import { createServer } from 'node:http'
 import { HTTP_PEER_ID_AUTH_PROTOCOL } from '@libp2p/http-peer-id-auth'
+import { canHandle } from '@libp2p/http-server/node'
+import { createLibp2p } from 'libp2p'
 
 const node = await createLibp2p({
   services: {

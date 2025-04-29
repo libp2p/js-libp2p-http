@@ -1,17 +1,17 @@
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { circuitRelayTransport } from '@libp2p/circuit-relay-v2'
+import { devToolsMetrics } from '@libp2p/devtools-metrics'
+import { http } from '@libp2p/http'
+import { nodeServer } from '@libp2p/http-server'
+import { createServer } from '@libp2p/http-server/node'
 import { identify } from '@libp2p/identify'
+import { ping } from '@libp2p/ping'
 import { webRTC } from '@libp2p/webrtc'
 import { webSockets } from '@libp2p/websockets'
 import { multiaddr } from '@multiformats/multiaddr'
-import { createLibp2p } from 'libp2p'
-import { http } from '@libp2p/http'
-import { createServer } from '@libp2p/http-server/node'
-import { nodeServer } from '@libp2p/http-server'
-import { devToolsMetrics } from '@libp2p/devtools-metrics'
-import { ping } from '@libp2p/ping'
 import { WebRTC } from '@multiformats/multiaddr-matcher'
+import { createLibp2p } from 'libp2p'
 
 const WEB_PAGE = `<!DOCTYPE html>
 <html lang="en">

@@ -4,7 +4,8 @@
   "eslintConfig": {
     "extends": "ipfs",
     "parserOptions": {
-      "project": true
+      "project": true,
+      "sourceType": "module"
     }
   },
   "scripts": {
@@ -16,7 +17,7 @@
   "dependencies": {
     "@libp2p/http": "~0.0.0",
     "@libp2p/http-server": "~0.0.0",
-    "@multiformats/multiaddr": "^12.4.0",
+    "@libp2p/http-ping": "~0.0.0",
     "libp2p": "^2.8.5"
   },
   "devDependencies": {
