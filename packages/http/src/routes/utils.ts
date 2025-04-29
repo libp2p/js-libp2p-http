@@ -3,7 +3,7 @@ import type { HTTPRoute, HandlerRoute, ServiceRoute } from '../index.js'
 /**
  * Returns true if the passed route requires initialization
  */
-export function isInitializable <H extends HandlerRoute<any>, S extends ServiceRoute<any>> (obj: H | S): obj is S {
+function isInitializable <H extends HandlerRoute<any>, S extends ServiceRoute<any>> (obj: H | S): obj is S {
   // @ts-expect-error init is not a property of H
   return typeof obj.init === 'function'
 }

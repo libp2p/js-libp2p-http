@@ -31,7 +31,7 @@ import type { HeaderInfo, MiddlewareOptions, Middleware } from '@libp2p/http-uti
 import type { AbortOptions, Connection, PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Agent, AgentOptions, IncomingMessage } from 'node:http'
-import type { Dispatcher, Agent as UnidiciAgent } from 'undici'
+import type { Dispatcher, Agent as UndiciAgent } from 'undici'
 
 export { WELL_KNOWN_PROTOCOLS_PATH } from './routes/well-known.js'
 export { HTTP_PROTOCOL } from './constants.js'
@@ -226,7 +226,7 @@ export interface HTTP {
    * All requests using this Agent will be sent to the peer reachable by the
    * peer ID or multiaddr(s) passed as the first argument.
    */
-  dispatcher (peer: PeerId | Multiaddr | Multiaddr[], options?: UnidiciAgent.Options): Dispatcher
+  dispatcher (peer: PeerId | Multiaddr | Multiaddr[], options?: UndiciAgent.Options): Dispatcher
 
   /**
    * Look up the path for the protocol and invoke it with the passed arguments.

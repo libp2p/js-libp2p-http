@@ -1,4 +1,5 @@
 /* eslint-disable */
+/* spell-checker: disable */
 // cases from https://github.com/creationix/http-parser-js
 
 var CRLF = '\r\n';

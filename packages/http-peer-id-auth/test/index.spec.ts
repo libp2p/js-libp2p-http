@@ -91,6 +91,7 @@ describe('@libp2p/http-peer-id-auth', () => {
     const serverKey = privateKeyFromProtobuf(uint8ArrayFromString(serverKeyHex, 'base16'))
 
     const serverSig = await sign(serverKey, PEER_ID_AUTH_SCHEME, [
+      // cspell:disable-next-line
       ['challenge-server', 'ERERERERERERERERERERERERERERERERERERERERERE='],
       ['client-public-key', clientPubKeyEncoded],
       ['hostname', 'example.com']

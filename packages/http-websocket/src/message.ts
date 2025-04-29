@@ -218,7 +218,7 @@ export function encodeMessage (opcode: MESSAGE_TYPE, data?: Uint8Array, maskData
 
     message.append(l)
   } else {
-    throw new Error('Payload too largs')
+    throw new Error('Payload too large')
   }
 
   if (maskData === true && data != null) {

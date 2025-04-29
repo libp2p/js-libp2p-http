@@ -1,7 +1,7 @@
 import { Agent as NodeAgent } from 'node:http'
 import { streamToSocket, toResource } from '@libp2p/http-utils'
 import { isPeerId } from '@libp2p/interface'
-import { Agent as UnidiciAgent } from 'undici'
+import { Agent as UndiciAgent } from 'undici'
 import { HTTP_PROTOCOL } from './constants.js'
 import { HTTP as HTTPBrowser } from './http.browser.js'
 import type { HTTP as HTTPInterface } from './index.js'
@@ -25,11 +25,11 @@ interface HTTPDispatcherComponents {
   connectionManager: ConnectionManager
 }
 
-interface HTTPDispatcherInit extends UnidiciAgent.Options {
+interface HTTPDispatcherInit extends UndiciAgent.Options {
   peer: PeerId | Multiaddr | Multiaddr[]
 }
 
-export class HTTPDispatcher extends UnidiciAgent {
+export class HTTPDispatcher extends UndiciAgent {
   constructor (components: HTTPDispatcherComponents, init: HTTPDispatcherInit) {
     super({
       ...init,
@@ -94,9 +94,9 @@ export class HTTP extends HTTPBrowser implements HTTPInterface {
     })
   }
 
-  dispatcher (peer: PeerId | Multiaddr | Multiaddr[], options?: UnidiciAgent.Options): Dispatcher {
+  dispatcher (peer: PeerId | Multiaddr | Multiaddr[], options?: UndiciAgent.Options): Dispatcher {
     if (!isPeerId(peer) && toResource(peer) instanceof URL) {
-      return new UnidiciAgent(options)
+      return new UndiciAgent(options)
     }
 
     return new HTTPDispatcher(this.components, {
