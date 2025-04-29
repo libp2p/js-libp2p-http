@@ -140,13 +140,23 @@ export class PeerIdAuth implements Middleware {
     // store the bearer token if the server provided it
     const serverAuthHeader = response.headers.get('authentication-info')
 
-    if (serverAuthHeader != null) {
-      const key = getCacheKey(resource, opts.headers)
-      const token = this.tokens.get(key)
+    const key = getCacheKey(resource, opts.headers)
+    const token = this.tokens.get(key)
 
-      if (token != null) {
-        token.authorization = token.handshake.decodeBearerToken(serverAuthHeader)
-      }
+    if (token?.peerId != null) {
+      const headers = new Headers(response.headers)
+      headers.set('x-libp2p-peer-id', token.peerId.toString())
+
+      // the property is read-only so we can't just assign it
+      Object.defineProperty(response, 'headers', {
+        writable: false,
+        enumerable: true,
+        value: headers
+      })
+    }
+
+    if (serverAuthHeader != null && token != null) {
+      token.authorization = token.handshake.decodeBearerToken(serverAuthHeader)
     }
   }
 }

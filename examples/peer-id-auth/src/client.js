@@ -13,16 +13,12 @@ const node = await createLibp2p({
 
 const res = await node.services.http.fetch('http://localhost:8001/log-my-id', {
   middleware: [
-    peerIdAuth({
-      verifyPeer: (peerId) => {
-        console.log('Server ID:', peerId.toString())
-
-        return true
-      }
-    })
+    peerIdAuth()
   ]
 })
 
-console.log('Client ID:', node.peerId.toString())
 console.info('GET', res.url, res.status, res.statusText)
 console.info(await res.text())
+
+console.log('Client ID:', node.peerId.toString())
+console.log('Server ID:', res.headers.get('x-libp2p-peer-id'))
