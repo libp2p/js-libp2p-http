@@ -1,3 +1,10 @@
+/**
+ * @packageDocumentation
+ *
+ * This is an implementation of the [Peer ID Auth](https://github.com/libp2p/specs/blob/master/http/peer-id-auth.md)
+ * spec that allows clients and servers to exchange PeerIds.
+ */
+
 import { publicKeyToProtobuf } from '@libp2p/crypto/keys'
 import { InvalidMessageError } from '@libp2p/interface'
 import { toString as uint8ArrayToString } from 'uint8arrays'

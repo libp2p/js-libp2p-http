@@ -24,24 +24,7 @@ repo and examine the changes made.
 
 -->
 
-This module allows you to use HTTP requests as a transport for libp2p
-protocols (libp2p over HTTP), and also libp2p streams as a transport for HTTP
-requests (HTTP over libp2p).
-
-It integrates with existing Node.js friendly HTTP frameworks such as
-[express](https://expressjs.com/) and [Fastify](https://fastify.dev) as well
-as [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)/
-[Response](https://developer.mozilla.org/en-US/docs/Web/API/Response)-based
-frameworks like [Hono](https://hono.dev/).
-
-It even allows creating Node.js-style [http.Server](https://nodejs.org/api/http.html#class-httpserver)s
-and [WebSocketServer](https://github.com/websockets/ws/blob/HEAD/doc/ws.md#class-websocketserver)s
-in browsers to truly realize the power of the distributed web.
-
-In addition to URL-based addressing, it can use a libp2p PeerId and/or
-multiaddr(s) and lets libp2p take care of the routing, thus taking advantage
-of features like multi-routes, NAT transversal and stream multiplexing over a
-single connection.
+Contains shared code and utilities used by `@libp2p/http-*` modules.
 
 # Install
 

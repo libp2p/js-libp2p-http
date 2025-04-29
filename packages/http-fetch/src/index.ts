@@ -1,3 +1,11 @@
+/**
+ * @packageDocumentation
+ *
+ * This is an implementation of the [fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
+ * that uses libp2p streams as the underlying transport layer, instead of a TCP
+ * socket.
+ */
+
 import { byteStream } from 'it-byte-stream'
 import { readResponse } from './read-response.js'
 import { sendRequest } from './send-request.js'

@@ -1,7 +1,7 @@
 {
   "name": "@libp2p/http-server",
   "version": "0.0.0",
-  "description": "An HTTP version of the ping protocol",
+  "description": "HTTP server components",
   "license": "Apache-2.0 OR MIT",
   "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-server#readme",
   "repository": {

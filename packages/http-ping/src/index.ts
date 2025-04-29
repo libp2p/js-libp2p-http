@@ -1,3 +1,9 @@
+/**
+ * @packageDocumentation
+ *
+ * This is an implementation of a ping protocol that runs over HTTP.
+ */
+
 import { PingHTTPService as PingHTTPServiceClass } from './ping.js'
 import type { HTTP, FetchInit, ConnectInit } from '@libp2p/http'
 import type { ComponentLogger, PeerId } from '@libp2p/interface'

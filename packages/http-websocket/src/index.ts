@@ -1,3 +1,11 @@
+/**
+ * @packageDocumentation
+ *
+ * This is an implementation of the [WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
+ * that uses libp2p streams as the underlying transport layer, instead of a TCP
+ * socket.
+ */
+
 import type { AbortOptions } from '@libp2p/interface'
 
 export interface WebSocketEvents {

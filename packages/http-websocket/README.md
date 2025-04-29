@@ -7,7 +7,7 @@
 [![codecov](https://img.shields.io/codecov/c/github/libp2p/js-libp2p-http.svg?style=flat-square)](https://codecov.io/gh/libp2p/js-libp2p-http)
 [![CI](https://img.shields.io/github/actions/workflow/status/libp2p/js-libp2p-http/js-test-and-release.yml?branch=main\&style=flat-square)](https://github.com/libp2p/js-libp2p-http/actions/workflows/js-test-and-release.yml?query=branch%3Amain)
 
-> libp2p-compatible implementation of the WebSocket api
+> libp2p-compatible implementation of the WebSocket API
 
 # About
 
@@ -26,24 +26,9 @@ repo and examine the changes made.
 
 -->
 
-This module allows you to use HTTP requests as a transport for libp2p
-protocols (libp2p over HTTP), and also libp2p streams as a transport for HTTP
-requests (HTTP over libp2p).
-
-It integrates with existing Node.js friendly HTTP frameworks such as
-[express](https://expressjs.com/) and [Fastify](https://fastify.dev) as well
-as [Request](https://developer.mozilla.org/en-US/docs/Web/API/Request)/
-[Response](https://developer.mozilla.org/en-US/docs/Web/API/Response)-based
-frameworks like [Hono](https://hono.dev/).
-
-It even allows creating Node.js-style [http.Server](https://nodejs.org/api/http.html#class-httpserver)s
-and [WebSocketServer](https://github.com/websockets/ws/blob/HEAD/doc/ws.md#class-websocketserver)s
-in browsers to truly realize the power of the distributed web.
-
-In addition to URL-based addressing, it can use a libp2p PeerId and/or
-multiaddr(s) and lets libp2p take care of the routing, thus taking advantage
-of features like multi-routes, NAT transversal and stream multiplexing over a
-single connection.
+This is an implementation of the [WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
+that uses libp2p streams as the underlying transport layer, instead of a TCP
+socket.
 
 # Install
 

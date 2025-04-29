@@ -43,6 +43,9 @@ multiaddr(s) and lets libp2p take care of the routing, thus taking advantage
 of features like multi-routes, NAT transversal and stream multiplexing over a
 single connection.
 
+Check out the [examples](https://github.com/libp2p/js-libp2p-http/tree/main/examples)
+for how you can use this in your applications!
+
 # Install
 
 ```console
