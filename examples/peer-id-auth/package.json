@@ -1,20 +1,29 @@
 {
   "name": "@libp2p/http-example-peer-id-auth",
   "version": "1.0.0",
-  "private": true,
   "description": "How to authenticate peers over HTTP",
-  "license": "Apache-2.0 OR MIT",
-  "type": "module",
+  "eslintConfig": {
+    "extends": "ipfs",
+    "parserOptions": {
+      "project": true
+    }
+  },
   "scripts": {
+    "clean": "aegir clean",
+    "lint": "aegir lint",
+    "dep-check": "aegir dep-check",
     "test": "test-node-example test/*"
   },
   "dependencies": {
-    "@libp2p/http": "0.0.0",
-    "@libp2p/http-server": "0.0.0",
+    "@libp2p/http": "~0.0.0",
+    "@libp2p/http-server": "~0.0.0",
     "@multiformats/multiaddr": "^12.4.0",
     "libp2p": "^2.8.5"
   },
   "devDependencies": {
-    "test-ipfs-example": "^1.0.0"
-  }
+    "aegir": "^45.2.1",
+    "test-ipfs-example": "^1.3.3"
+  },
+  "private": true,
+  "type": "module"
 }

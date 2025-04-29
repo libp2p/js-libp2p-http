@@ -3,13 +3,13 @@
   "version": "0.0.0",
   "description": "Accept HTTP requests over libp2p streams or use libp2p protocols over HTTP",
   "license": "Apache-2.0 OR MIT",
-  "homepage": "https://github.com/libp2p/js-libp2p-http-fetch#readme",
+  "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/http#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/libp2p/js-libp2p-http-fetch.git"
+    "url": "git+https://github.com/libp2p/js-libp2p-http.git"
   },
   "bugs": {
-    "url": "https://github.com/libp2p/js-libp2p-http-fetch/issues"
+    "url": "https://github.com/libp2p/js-libp2p-http/issues"
   },
   "publishConfig": {
     "access": "public",
@@ -163,18 +163,18 @@
     "release": "aegir release"
   },
   "dependencies": {
-    "@libp2p/http-peer-id-auth": "^0.0.0",
-    "@libp2p/interface": "^2.2.0",
-    "@libp2p/interface-internal": "^2.0.10",
-    "@multiformats/multiaddr": "^12.3.0",
+    "@libp2p/http-fetch": "~0.0.0",
+    "@libp2p/http-peer-id-auth": "~0.0.0",
+    "@libp2p/http-utils": "~0.0.0",
+    "@libp2p/http-websocket": "~0.0.0",
+    "@libp2p/interface": "^2.9.0",
+    "@libp2p/interface-internal": "^2.3.11",
+    "@multiformats/multiaddr": "^12.4.0",
     "cookie": "^1.0.2",
-    "undici": "^6.21.2",
-    "@libp2p/http-fetch": "^0.0.0",
-    "@libp2p/http-websocket": "^0.0.0",
-    "@libp2p/http-utils": "^0.0.0"
+    "undici": "^6.21.2"
   },
   "devDependencies": {
-    "aegir": "^45.0.0"
+    "aegir": "^45.2.1"
   },
   "browser": {
     "./dist/src/http.js": "./dist/src/http.browser.js"

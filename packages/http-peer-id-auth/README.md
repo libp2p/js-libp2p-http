@@ -1,5 +1,7 @@
 # @libp2p/http-client
 
+# @libp2p/http-peer-id-auth
+
 [![libp2p.io](https://img.shields.io/badge/project-libp2p-yellow.svg?style=flat-square)](http://libp2p.io/)
 [![Discuss](https://img.shields.io/discourse/https/discuss.libp2p.io/posts.svg?style=flat-square)](https://discuss.libp2p.io)
 [![codecov](https://img.shields.io/codecov/c/github/libp2p/js-libp2p-http.svg?style=flat-square)](https://codecov.io/gh/libp2p/js-libp2p-http)
@@ -46,27 +48,27 @@ single connection.
 # Install
 
 ```console
-$ npm i @libp2p/http
+$ npm i @libp2p/http-peer-id-auth
 ```
 
 ## Browser `<script>` tag
 
-Loading this module through a script tag will make its exports available as `Libp2pHttp` in the global namespace.
+Loading this module through a script tag will make its exports available as `Libp2pHttpPeerIdAuth` in the global namespace.
 
 ```html
-<script src="https://unpkg.com/@libp2p/http/dist/index.min.js"></script>
+<script src="https://unpkg.com/@libp2p/http-peer-id-auth/dist/index.min.js"></script>
 ```
 
 # API Docs
 
-- <https://libp2p.github.io/js-libp2p-http>
+- <https://libp2p.github.io/js-libp2p-http/modules/_libp2p_http_peer_id_auth.html>
 
 # License
 
 Licensed under either of
 
-- Apache 2.0, ([LICENSE-APACHE](https://github.com/libp2p/js-libp2p-http/LICENSE-APACHE) / <http://www.apache.org/licenses/LICENSE-2.0>)
-- MIT ([LICENSE-MIT](https://github.com/libp2p/js-libp2p-http/LICENSE-MIT) / <http://opensource.org/licenses/MIT>)
+- Apache 2.0, ([LICENSE-APACHE](https://github.com/libp2p/js-libp2p-http/blob/main/packages/http-peer-id-auth/LICENSE-APACHE) / <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT ([LICENSE-MIT](https://github.com/libp2p/js-libp2p-http/blob/main/packages/http-peer-id-auth/LICENSE-MIT) / <http://opensource.org/licenses/MIT>)
 
 # Contribution
 

@@ -3,13 +3,13 @@
   "version": "0.0.0",
   "description": "libp2p-compatible implementation of the WebSocket api",
   "license": "Apache-2.0 OR MIT",
-  "homepage": "https://github.com/libp2p/js-libp2p-http-fetch#readme",
+  "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-websocket#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/libp2p/js-libp2p-http-fetch.git"
+    "url": "git+https://github.com/libp2p/js-libp2p-http.git"
   },
   "bugs": {
-    "url": "https://github.com/libp2p/js-libp2p-http-fetch/issues"
+    "url": "https://github.com/libp2p/js-libp2p-http/issues"
   },
   "publishConfig": {
     "access": "public",
@@ -140,18 +140,18 @@
   },
   "dependencies": {
     "@achingbrain/http-parser-js": "^0.5.9",
-    "@libp2p/http-utils": "^0.0.0",
-    "@libp2p/interface": "^2.2.0",
-    "@libp2p/interface-internal": "^2.0.10",
-    "@libp2p/utils": "^6.6.0",
-    "@multiformats/multiaddr": "^12.3.0",
+    "@libp2p/http-utils": "~0.0.0",
+    "@libp2p/interface": "^2.9.0",
+    "@libp2p/interface-internal": "^2.3.11",
+    "@libp2p/utils": "^6.6.2",
+    "@multiformats/multiaddr": "^12.4.0",
     "it-byte-stream": "^2.0.1",
     "multiformats": "^13.3.2",
     "uint8arraylist": "^2.4.8",
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
-    "aegir": "^45.0.0"
+    "aegir": "^45.2.1"
   },
   "browser": {
     "./dist/src/auth/agent.js": "./dist/src/auth/agent.browser.js",

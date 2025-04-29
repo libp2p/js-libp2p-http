@@ -6,5 +6,19 @@
   "include": [
     "src",
     "test"
+  ],
+  "references": [
+    {
+      "path": "../http-fetch"
+    },
+    {
+      "path": "../http-peer-id-auth"
+    },
+    {
+      "path": "../http-utils"
+    },
+    {
+      "path": "../http-websocket"
+    }
   ]
 }

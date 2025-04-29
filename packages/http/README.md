@@ -59,14 +59,14 @@ Loading this module through a script tag will make its exports available as `Lib
 
 # API Docs
 
-- <https://libp2p.github.io/js-libp2p-http>
+- <https://libp2p.github.io/js-libp2p-http/modules/_libp2p_http.html>
 
 # License
 
 Licensed under either of
 
-- Apache 2.0, ([LICENSE-APACHE](https://github.com/libp2p/js-libp2p-http/LICENSE-APACHE) / <http://www.apache.org/licenses/LICENSE-2.0>)
-- MIT ([LICENSE-MIT](https://github.com/libp2p/js-libp2p-http/LICENSE-MIT) / <http://opensource.org/licenses/MIT>)
+- Apache 2.0, ([LICENSE-APACHE](https://github.com/libp2p/js-libp2p-http/blob/main/packages/http/LICENSE-APACHE) / <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT ([LICENSE-MIT](https://github.com/libp2p/js-libp2p-http/blob/main/packages/http/LICENSE-MIT) / <http://opensource.org/licenses/MIT>)
 
 # Contribution
 

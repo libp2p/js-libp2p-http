@@ -1,5 +1,7 @@
 # @libp2p/http
 
+# js-libp2p-http-monorepo
+
 [![libp2p.io](https://img.shields.io/badge/project-libp2p-yellow.svg?style=flat-square)](http://libp2p.io/)
 [![Discuss](https://img.shields.io/discourse/https/discuss.libp2p.io/posts.svg?style=flat-square)](https://discuss.libp2p.io)
 [![codecov](https://img.shields.io/codecov/c/github/libp2p/js-libp2p-http.svg?style=flat-square)](https://codecov.io/gh/libp2p/js-libp2p-http)
@@ -43,6 +45,23 @@ multiaddr(s) and lets libp2p take care of the routing, thus taking advantage
 of features like multi-routes, NAT transversal and stream multiplexing over a
 single connection.
 
+# Packages
+
+- [`examples/express-server-over-libp2p`](https://github.com/libp2p/js-libp2p-http/tree/main/examples/express-server-over-libp2p) How to serve an express app over libp2p streams
+- [`examples/hono-server-over-libp2p`](https://github.com/libp2p/js-libp2p-http/tree/main/examples/hono-server-over-libp2p) undefined
+- [`examples/libp2p-over-http-server`](https://github.com/libp2p/js-libp2p-http/tree/main/examples/libp2p-over-http-server) undefined
+- [`examples/peer-id-auth`](https://github.com/libp2p/js-libp2p-http/tree/main/examples/peer-id-auth) How to authenticate peers over HTTP
+- [`examples/serving-websites-from-web-browsers`](https://github.com/libp2p/js-libp2p-http/tree/main/examples/serving-websites-from-web-browsers) How to serve websites from web browsers using libp2p
+- [`examples/websockets-over-libp2p`](https://github.com/libp2p/js-libp2p-http/tree/main/examples/websockets-over-libp2p) How to serve WebSockets over libp2p streams
+- [`packages/http`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http) Accept HTTP requests over libp2p streams or use libp2p protocols over HTTP
+- [`packages/http-fetch`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-fetch) libp2p-compatible implementation of the fetch api
+- [`packages/http-peer-id-auth`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-peer-id-auth) An implementation of Peer ID Authentication over HTTP
+- [`packages/http-ping`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-ping) An HTTP version of the ping protocol
+- [`packages/http-server`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-server) An HTTP version of the ping protocol
+- [`packages/http-utils`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-utils) Shared utils and common code for HTTP modules
+- [`packages/http-websocket`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-websocket) libp2p-compatible implementation of the WebSocket api
+- [`packages/interop`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/interop) Accept HTTP requests over libp2p streams or use libp2p protocols over HTTP
+
 # Install
 
 ```console
@@ -65,8 +84,8 @@ Loading this module through a script tag will make its exports available as `Lib
 
 Licensed under either of
 
-- Apache 2.0, ([LICENSE-APACHE](https://github.com/libp2p/js-libp2p-http/LICENSE-APACHE) / <http://www.apache.org/licenses/LICENSE-2.0>)
-- MIT ([LICENSE-MIT](https://github.com/libp2p/js-libp2p-http/LICENSE-MIT) / <http://opensource.org/licenses/MIT>)
+- Apache 2.0, ([LICENSE-APACHE](https://github.com/libp2p/js-libp2p-http/blob/main/LICENSE-APACHE) / <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT ([LICENSE-MIT](https://github.com/libp2p/js-libp2p-http/blob/main/LICENSE-MIT) / <http://opensource.org/licenses/MIT>)
 
 # Contribution
 

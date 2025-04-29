@@ -3,13 +3,13 @@
   "version": "0.0.0",
   "description": "Shared utils and common code for HTTP modules",
   "license": "Apache-2.0 OR MIT",
-  "homepage": "https://github.com/libp2p/js-libp2p-http-fetch#readme",
+  "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-utils#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/libp2p/js-libp2p-http-fetch.git"
+    "url": "git+https://github.com/libp2p/js-libp2p-http.git"
   },
   "bugs": {
-    "url": "https://github.com/libp2p/js-libp2p-http-fetch/issues"
+    "url": "https://github.com/libp2p/js-libp2p-http/issues"
   },
   "publishConfig": {
     "access": "public",
@@ -140,9 +140,9 @@
   },
   "dependencies": {
     "@achingbrain/http-parser-js": "^0.5.9",
-    "@libp2p/interface": "^2.2.0",
-    "@libp2p/peer-id": "^5.0.7",
-    "@multiformats/multiaddr": "^12.3.0",
+    "@libp2p/interface": "^2.9.0",
+    "@libp2p/peer-id": "^5.1.2",
+    "@multiformats/multiaddr": "^12.4.0",
     "@multiformats/multiaddr-to-uri": "^11.0.0",
     "@multiformats/uri-to-multiaddr": "^9.0.1",
     "it-byte-stream": "^2.0.1",
@@ -154,7 +154,7 @@
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
-    "aegir": "^45.0.0"
+    "aegir": "^45.2.1"
   },
   "browser": {
     "node:stream": "readable-stream"
