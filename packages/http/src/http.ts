@@ -29,7 +29,7 @@ interface HTTPDispatcherInit extends UndiciAgent.Options {
   peer: PeerId | Multiaddr | Multiaddr[]
 }
 
-export class HTTPDispatcher extends UndiciAgent {
+export class Libp2pDispatcher extends UndiciAgent {
   constructor (components: HTTPDispatcherComponents, init: HTTPDispatcherInit) {
     super({
       ...init,
@@ -56,7 +56,7 @@ interface HTTPAgentInit extends AgentOptions {
   peer: PeerId | Multiaddr | Multiaddr[]
 }
 
-class HTTPAgent extends NodeAgent {
+class Libp2pAgent extends NodeAgent {
   public readonly keepAliveMsecs: number = 100
   private readonly components: HTTPAgentComponents
   private readonly peer: PeerId | Multiaddr | Multiaddr[]
@@ -88,7 +88,7 @@ export class HTTP extends HTTPBrowser implements HTTPInterface {
       return new NodeAgent(options)
     }
 
-    return new HTTPAgent(this.components, {
+    return new Libp2pAgent(this.components, {
       ...options,
       peer
     })
@@ -99,7 +99,7 @@ export class HTTP extends HTTPBrowser implements HTTPInterface {
       return new UndiciAgent(options)
     }
 
-    return new HTTPDispatcher(this.components, {
+    return new Libp2pDispatcher(this.components, {
       ...options,
       peer
     })

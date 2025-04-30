@@ -12,6 +12,7 @@ are most familiar with.
 - [Express server over libp2p](./express-server-over-libp2p)
 - [Hono server over libp2p](./hono-server-over-libp2p)
 - [WebSockets over libp2p](./websockets-over-libp2p)
+- [libp2p as a HTTP transport]('./libp2p-as-http-transport)
 
 ## libp2p over HTTP
 
