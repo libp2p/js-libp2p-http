@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>js-libp2p serving websites</title>
+    <style>
+      label,
+      button {
+        display: block;
+        font-weight: bold;
+        margin: 5px 0;
+      }
+      div {
+        margin-bottom: 20px;
+      }
+      #send-section {
+        display: none;
+      }
+      input[type="text"] {
+        width: 800px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>libp2p Browser Web Server Example</h1>
+    <p>This example demonstrates running a web server in a browser</p>
+    <hr />
+    <div>
+      <label for="relay">Dial MultiAddr</label>
+      <p>Enter a relay address and click "Connect"</p>
+      <input type="text" id="dial-multiaddr-input" placeholder="/ip4/127.0.0.1/tcp/1234/ws/p2p/123Foo" />
+      <button id="dial-multiaddr-button">Connect</button>
+      <h4>Listening Addresses</h4>
+      <ul id="listening-addresses">
+        <li>None</li>
+      </ul>
+    </div>
+    <hr />
+    <div>
+      <h2>Log</h2>
+      <pre id="output"></pre>
+    </div>
+    <script type="module" src="./index.js"></script>
+  </body>
+</html>

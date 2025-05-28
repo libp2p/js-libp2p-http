@@ -1,0 +1,162 @@
+{
+  "name": "@libp2p/http-websocket",
+  "version": "0.0.0",
+  "description": "libp2p-compatible implementation of the WebSocket API",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-websocket#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/libp2p/js-libp2p-http.git"
+  },
+  "bugs": {
+    "url": "https://github.com/libp2p/js-libp2p-http/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "src",
+    "dist",
+    "!dist/test",
+    "!**/*.tsbuildinfo"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      [
+        "@semantic-release/commit-analyzer",
+        {
+          "preset": "conventionalcommits",
+          "releaseRules": [
+            {
+              "breaking": true,
+              "release": "major"
+            },
+            {
+              "revert": true,
+              "release": "patch"
+            },
+            {
+              "type": "feat",
+              "release": "minor"
+            },
+            {
+              "type": "fix",
+              "release": "patch"
+            },
+            {
+              "type": "docs",
+              "release": "patch"
+            },
+            {
+              "type": "test",
+              "release": "patch"
+            },
+            {
+              "type": "deps",
+              "release": "patch"
+            },
+            {
+              "scope": "no-release",
+              "release": false
+            }
+          ]
+        }
+      ],
+      [
+        "@semantic-release/release-notes-generator",
+        {
+          "preset": "conventionalcommits",
+          "presetConfig": {
+            "types": [
+              {
+                "type": "feat",
+                "section": "Features"
+              },
+              {
+                "type": "fix",
+                "section": "Bug Fixes"
+              },
+              {
+                "type": "chore",
+                "section": "Trivial Changes"
+              },
+              {
+                "type": "docs",
+                "section": "Documentation"
+              },
+              {
+                "type": "deps",
+                "section": "Dependencies"
+              },
+              {
+                "type": "test",
+                "section": "Tests"
+              }
+            ]
+          }
+        }
+      ],
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "CHANGELOG.md",
+            "package.json"
+          ]
+        }
+      ]
+    ]
+  },
+  "scripts": {
+    "build": "aegir build",
+    "clean": "aegir clean",
+    "lint": "aegir lint",
+    "test": "aegir test",
+    "test:chrome": "aegir test -t browser --cov",
+    "test:firefox": "aegir test -t browser --browser firefox --cov",
+    "test:node": "aegir test -t node --cov",
+    "test:electron-main": "aegir test -t electron-main",
+    "test:chrome-webworker": "aegir test -t webworker",
+    "test:webkit": "aegir test -t browser -- --browser webkit",
+    "test:firefox-webworker": "aegir test -t webworker -- --browser firefox",
+    "dep-check": "aegir dep-check",
+    "release": "aegir release"
+  },
+  "dependencies": {
+    "@achingbrain/http-parser-js": "^0.5.9",
+    "@libp2p/http-utils": "~0.0.0",
+    "@libp2p/interface": "^2.10.2",
+    "@libp2p/interface-internal": "^2.3.14",
+    "@libp2p/utils": "^6.6.5",
+    "@multiformats/multiaddr": "^12.4.0",
+    "it-byte-stream": "^2.0.2",
+    "multiformats": "^13.3.6",
+    "uint8arraylist": "^2.4.8",
+    "uint8arrays": "^5.1.0"
+  },
+  "devDependencies": {
+    "aegir": "^47.0.16"
+  },
+  "browser": {
+    "./dist/src/auth/agent.js": "./dist/src/auth/agent.browser.js",
+    "./dist/src/http.js": "./dist/src/http.browser.js",
+    "./dist/src/http/index.js": "./dist/src/http/index.browser.js",
+    "./dist/test/index.spec.js": "./dist/test/index.browser.spec.js"
+  },
+  "sideEffects": false
+}
