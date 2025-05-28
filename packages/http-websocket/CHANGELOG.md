@@ -1,3 +1,9 @@
+## [@libp2p/http-websocket-v1.0.1](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-websocket-1.0.0...@libp2p/http-websocket-1.0.1) (2025-05-28)
+
+### Bug Fixes
+
+* update sibling module versions ([524cf25](https://github.com/libp2p/js-libp2p-http/commit/524cf25745dcb5842949549c1020cdc057775187))
+
 ## @libp2p/http-websocket-v1.0.0 (2025-05-28)
 
 ### ⚠ BREAKING CHANGES
