@@ -39,6 +39,10 @@ export async function issueBearerToken (data: OpaqueDataHeader, hostname: string
   const opaque = await unwrapOpaque(serverKey.publicKey, data)
   validateOpaqueData(opaque, hostname, tokenTTL)
 
+  if (opaque.clientPublicKey == null) {
+    throw new InvalidMessageError('Missing client public key')
+  }
+
   const clientPublicKey = publicKeyFromProtobuf(uint8ArrayFromString(opaque.clientPublicKey, 'base64urlpad'))
   const clientPeerId = peerIdFromPublicKey(clientPublicKey)
 

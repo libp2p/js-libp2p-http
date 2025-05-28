@@ -18,10 +18,10 @@
     "@libp2p/http": "~0.0.0",
     "@libp2p/http-server": "~0.0.0",
     "@libp2p/http-ping": "~0.0.0",
-    "libp2p": "^2.8.5"
+    "libp2p": "^2.8.8"
   },
   "devDependencies": {
-    "aegir": "^45.2.1",
+    "aegir": "^47.0.16",
     "test-ipfs-example": "^1.3.3"
   },
   "private": true,

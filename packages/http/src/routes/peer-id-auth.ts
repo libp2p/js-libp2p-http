@@ -45,7 +45,6 @@ export class PeerIdAuth {
     this.verifyHostname = init.verifyHostname ?? (() => true)
   }
 
-  /* eslint-disable-next-line complexity */
   public async authenticateRequest (hostname: string, authHeader?: string | null): Promise<AuthenticationResult> {
     if (!(await this.verifyHostname(hostname))) {
       this.log.error('hostname verification failed')

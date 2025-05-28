@@ -17,7 +17,7 @@
  *
  * In addition to URL-based addressing, it can use a libp2p PeerId and/or
  * multiaddr(s) and lets libp2p take care of the routing, thus taking advantage
- * of features like multi-routes, NAT transversal and stream multiplexing over a
+ * of features like multi-routes, NAT traversal and stream multiplexing over a
  * single connection.
  *
  * Check out the [examples](https://github.com/libp2p/js-libp2p-http/tree/main/examples)

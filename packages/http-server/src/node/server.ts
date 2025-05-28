@@ -4,7 +4,7 @@ import { NOT_IMPLEMENTED_ERROR } from '@libp2p/http-utils'
 import { IncomingMessage as IncomingMessageClass } from './incoming-message.js'
 import { ServerResponse as ServerResponseClass } from './server-response.js'
 import type { ServerOptions, ServerResponse, IncomingMessage } from 'node:http'
-import type { AddressInfo, ListenOptions, Socket } from 'node:net'
+import type { AddressInfo, Socket } from 'node:net'
 
 export interface HTTPServerEvents <Request, Response> {
   request: [Request, Response]
@@ -95,9 +95,7 @@ export class HTTPServer <
     })
   }
 
-  setTimeout (msecs?: number, callback?: (socket: Socket) => void): this
-  setTimeout (callback?: (socket: Socket) => void): this
-  setTimeout (msecs?: any, callback?: any): this {
+  setTimeout (...args: any[]): this {
     return this
   }
 
@@ -109,15 +107,6 @@ export class HTTPServer <
 
   }
 
-  listen (port?: number, hostname?: string, backlog?: number, listeningListener?: () => void): this
-  listen (port?: number, hostname?: string, listeningListener?: () => void): this
-  listen (port?: number, backlog?: number, listeningListener?: () => void): this
-  listen (port?: number, listeningListener?: () => void): this
-  listen (path: string, backlog?: number, listeningListener?: () => void): this
-  listen (path: string, listeningListener?: () => void): this
-  listen (options: ListenOptions, listeningListener?: () => void): this
-  listen (handle: any, backlog?: number, listeningListener?: () => void): this
-  listen (handle: any, listeningListener?: () => void): this
   listen (...args: any[]): this {
     this._listening = true
     return this
@@ -133,8 +122,9 @@ export class HTTPServer <
     return null
   }
 
-  getConnections (cb: (error: Error | null, count: number) => void): void {
+  getConnections (cb: (error: Error | null, count: number) => void): this {
     cb(null, this.connections)
+    return this
   }
 
   ref (): this {

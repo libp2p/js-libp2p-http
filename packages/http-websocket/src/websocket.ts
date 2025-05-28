@@ -1,7 +1,7 @@
 import { getHeaders } from '@libp2p/http-utils'
 import { InvalidParametersError, TypedEventEmitter } from '@libp2p/interface'
 import { isPromise } from '@libp2p/utils/is-promise'
-import { byteStream, type ByteStream } from 'it-byte-stream'
+import { byteStream } from 'it-byte-stream'
 import { Uint8ArrayList } from 'uint8arraylist'
 import { CloseEvent, ErrorEvent } from './events.js'
 import { encodeMessage, decodeMessage, CLOSE_MESSAGES } from './message.js'
@@ -12,6 +12,7 @@ import type { HeaderInfo } from '@libp2p/http-utils'
 import type { AbortOptions, Stream } from '@libp2p/interface'
 import type { ConnectionManager } from '@libp2p/interface-internal'
 import type { Multiaddr } from '@multiformats/multiaddr'
+import type { ByteStream } from 'it-byte-stream'
 import type { IncomingMessage } from 'node:http'
 import type { Duplex } from 'node:stream'
 
@@ -169,7 +170,7 @@ abstract class AbstractWebSocket extends TypedEventEmitter<WebSocketEvents> {
       }
 
       if (DATA_MESSAGES.includes(message.type) && message.data != null) {
-        let data: Blob | ArrayBuffer
+        let data: Blob | ArrayBuffer | ArrayBufferLike
 
         if (this.binaryType === 'blob') {
           data = new Blob([message.data])

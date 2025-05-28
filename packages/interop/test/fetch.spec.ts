@@ -1,11 +1,12 @@
 import { nodeServer } from '@libp2p/http-server'
 import { createServer } from '@libp2p/http-server/node'
 import { stop } from '@libp2p/interface'
-import { multiaddr, type Multiaddr } from '@multiformats/multiaddr'
+import { multiaddr } from '@multiformats/multiaddr'
 import { expect } from 'aegir/chai'
 import { createHttp } from './fixtures/create-http.js'
 import { getClient, getHTTPOverLibp2pHandler } from './fixtures/get-libp2p.js'
 import type { HTTP } from '@libp2p/http'
+import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Libp2p } from 'libp2p'
 
 interface Test {

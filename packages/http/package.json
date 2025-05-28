@@ -53,13 +53,6 @@
       "import": "./dist/src/routes/index.js"
     }
   },
-  "eslintConfig": {
-    "extends": "ipfs",
-    "parserOptions": {
-      "project": true,
-      "sourceType": "module"
-    }
-  },
   "release": {
     "branches": [
       "main"
@@ -142,7 +135,15 @@
       "@semantic-release/changelog",
       "@semantic-release/npm",
       "@semantic-release/github",
-      "@semantic-release/git"
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "CHANGELOG.md",
+            "package.json"
+          ]
+        }
+      ]
     ]
   },
   "scripts": {
@@ -163,18 +164,18 @@
     "release": "aegir release"
   },
   "dependencies": {
-    "@libp2p/http-fetch": "~0.0.0",
+    "@libp2p/http-fetch": "^2.0.0",
     "@libp2p/http-peer-id-auth": "~0.0.0",
     "@libp2p/http-utils": "~0.0.0",
     "@libp2p/http-websocket": "~0.0.0",
-    "@libp2p/interface": "^2.9.0",
-    "@libp2p/interface-internal": "^2.3.11",
+    "@libp2p/interface": "^2.10.2",
+    "@libp2p/interface-internal": "^2.3.14",
     "@multiformats/multiaddr": "^12.4.0",
     "cookie": "^1.0.2",
-    "undici": "^6.21.2"
+    "undici": "^6.21.3"
   },
   "devDependencies": {
-    "aegir": "^45.2.1"
+    "aegir": "^47.0.16"
   },
   "browser": {
     "./dist/src/http.js": "./dist/src/http.browser.js"

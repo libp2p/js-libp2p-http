@@ -9,10 +9,10 @@
 import type { AbortOptions } from '@libp2p/interface'
 
 export interface WebSocketEvents {
-  'close': CloseEvent
-  'error': Event
-  'message': MessageEvent
-  'open': Event
+  close: CloseEvent
+  error: Event
+  message: MessageEvent
+  open: Event
 }
 
 export interface CloseListener {

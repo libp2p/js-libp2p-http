@@ -38,7 +38,7 @@ just without depending on any Node.js internals so you can use it in a web
 browser with no other dependencies!
 
 Start the webapp (your browser should open):
-"
+
 ```console
 npm start
 

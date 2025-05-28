@@ -12,19 +12,6 @@
     "url": "https://github.com/libp2p/js-libp2p-http/issues"
   },
   "type": "module",
-  "eslintConfig": {
-    "extends": "ipfs",
-    "parserOptions": {
-      "project": true,
-      "sourceType": "module"
-    }
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
-    }
-  },
   "release": {
     "branches": [
       "main"
@@ -107,7 +94,15 @@
       "@semantic-release/changelog",
       "@semantic-release/npm",
       "@semantic-release/github",
-      "@semantic-release/git"
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "CHANGELOG.md",
+            "package.json"
+          ]
+        }
+      ]
     ]
   },
   "scripts": {
@@ -131,29 +126,29 @@
     "@chainsafe/libp2p-noise": "^16.1.3",
     "@chainsafe/libp2p-yamux": "^7.0.1",
     "@fastify/cookie": "^11.0.2",
-    "@fastify/websocket": "^11.0.2",
-    "@libp2p/crypto": "^5.1.1",
+    "@fastify/websocket": "^11.1.0",
+    "@libp2p/crypto": "^5.1.4",
     "@libp2p/http": "~0.0.0",
     "@libp2p/http-ping": "~0.0.0",
     "@libp2p/http-server": "~0.0.0",
-    "@libp2p/interface": "^2.9.0",
-    "@libp2p/memory": "^1.1.6",
-    "@libp2p/peer-id": "^5.1.2",
-    "@libp2p/ping": "^2.0.29",
-    "@libp2p/websockets": "^9.2.10",
+    "@libp2p/interface": "^2.10.2",
+    "@libp2p/memory": "^1.1.9",
+    "@libp2p/peer-id": "^5.1.5",
+    "@libp2p/ping": "^2.0.32",
+    "@libp2p/websockets": "^9.2.13",
     "@multiformats/multiaddr": "^12.4.0",
     "@types/cookie-parser": "^1.4.8",
-    "@types/express": "^5.0.1",
+    "@types/express": "^5.0.2",
     "@types/ws": "^8.18.1",
-    "aegir": "^45.2.1",
+    "aegir": "^47.0.16",
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
-    "fastify": "^5.3.2",
-    "libp2p": "^2.8.5",
+    "fastify": "^5.3.3",
+    "libp2p": "^2.8.8",
     "p-defer": "^4.0.1",
     "p-event": "^6.0.1",
     "sinon": "^20.0.0",
-    "ws": "^8.18.1"
+    "ws": "^8.18.2"
   },
   "browser": {
     "./dist/src/auth/agent.js": "./dist/src/auth/agent.browser.js",

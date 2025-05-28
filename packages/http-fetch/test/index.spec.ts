@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /* eslint-env mocha */
 
 import { readHeaders, responseToStream, streamToRequest } from '@libp2p/http-utils'

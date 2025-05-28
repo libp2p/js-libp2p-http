@@ -1,7 +1,8 @@
-import { MissingAuthHeaderError, DEFAULT_AUTH_TOKEN_TTL, ClientInitiatedHandshake, type VerifyPeer } from '@libp2p/http-peer-id-auth'
+import { MissingAuthHeaderError, DEFAULT_AUTH_TOKEN_TTL, ClientInitiatedHandshake } from '@libp2p/http-peer-id-auth'
 import { getHost, isWebSocketUpgrade } from '@libp2p/http-utils'
 import { InvalidMessageError, InvalidParametersError } from '@libp2p/interface'
 import type { Middleware, MiddlewareOptions, HTTP } from '../index.js'
+import type { VerifyPeer } from '@libp2p/http-peer-id-auth'
 import type { ComponentLogger, PeerId, PrivateKey } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 

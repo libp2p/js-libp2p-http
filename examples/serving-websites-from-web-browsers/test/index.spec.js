@@ -1,5 +1,3 @@
-/* eslint-disable no-console */
-
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setup, expect } from 'test-ipfs-example/browser'
@@ -24,7 +22,6 @@ test.describe('serving websites from a web browser:', () => {
   let proxyNode
   let proxyNodeAddr
 
-  // eslint-disable-next-line no-empty-pattern
   test.beforeAll(async ({ servers }, testInfo) => {
     testInfo.setTimeout(5 * 60_000)
 

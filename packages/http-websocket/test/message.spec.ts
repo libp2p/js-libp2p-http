@@ -89,7 +89,7 @@ describe('websocket messages', () => {
     })
 
     it('256 bytes binary message in a single unmasked frame', () => {
-      const data = new Uint8Array(256).map(((v, i) => i))
+      const data = new Uint8Array(256).map((v, i) => i)
       const input = Uint8Array.from([
         0x82, 0x7E, 0x01, 0x00
       ])
@@ -100,7 +100,7 @@ describe('websocket messages', () => {
     })
 
     it.skip('64KiB binary message in a single unmasked frame', () => {
-      const data = new Uint8Array(Math.pow(2, 16)).map(((v, i) => i))
+      const data = new Uint8Array(Math.pow(2, 16)).map((v, i) => i)
       const input = Uint8Array.from([
         0x82, 0x7F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00
       ])

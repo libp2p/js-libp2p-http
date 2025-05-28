@@ -127,7 +127,6 @@ export class ServerResponse<Request extends IncomingMessage = IncomingMessage> e
   }
 
   removeHeader (name: string): void {
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete this.headers[name]
   }
 
