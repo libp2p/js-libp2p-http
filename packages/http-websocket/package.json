@@ -139,7 +139,7 @@
   },
   "dependencies": {
     "@achingbrain/http-parser-js": "^0.5.9",
-    "@libp2p/http-utils": "~0.0.0",
+    "@libp2p/http-utils": "^1.0.0",
     "@libp2p/interface": "^2.10.2",
     "@libp2p/interface-internal": "^2.3.14",
     "@libp2p/utils": "^6.6.5",
