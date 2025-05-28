@@ -59,7 +59,7 @@ single connection.
 - [`packages/http-server`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-server) HTTP server components
 - [`packages/http-utils`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-utils) Shared utils and common code for HTTP modules
 - [`packages/http-websocket`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-websocket) libp2p-compatible implementation of the WebSocket API
-- [`packages/interop`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/interop) Accept HTTP requests over libp2p streams or use libp2p protocols over HTTP
+- [`packages/interop`](https://github.com/libp2p/js-libp2p-http/tree/main/packages/interop) Interop tests for the @libp2p/http collection of modules
 
 # Install
 

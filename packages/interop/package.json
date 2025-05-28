@@ -24,9 +24,7 @@
     "test:chrome-webworker": "aegir test -t webworker",
     "test:webkit": "aegir test -t browser -- --browser webkit",
     "test:firefox-webworker": "aegir test -t webworker -- --browser firefox",
-    "dep-check": "aegir dep-check",
-    "doc-check": "aegir doc-check",
-    "docs": "aegir docs"
+    "dep-check": "aegir dep-check"
   },
   "devDependencies": {
     "@chainsafe/libp2p-noise": "^16.1.3",

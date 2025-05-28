@@ -13,7 +13,7 @@
   },
   "private": true,
   "scripts": {
-    "reset": "aegir run clean && aegir clean examples/*/node_modules packages/*/node_modules node_modules package-lock.json packages/*/package-lock.json examples/*/package-lock.json",
+    "reset": "aegir run clean && aegir clean interop/node_modules packages/*/node_modules node_modules package-lock.json packages/*/package-lock.json interop/*/package-lock.json",
     "test": "aegir run test",
     "test:node": "aegir run test:node",
     "test:chrome": "aegir run test:chrome",
@@ -26,16 +26,17 @@
     "test:interop": "aegir run test:interop",
     "coverage": "aegir run coverage",
     "build": "aegir run build",
+    "generate": "aegir run generate",
     "clean": "aegir run clean",
     "lint": "aegir run lint",
     "dep-check": "aegir run dep-check",
     "doc-check": "aegir run doc-check",
     "spell-check": "aegir spell-check",
+    "start": "aegir run start",
     "release": "run-s build docs:no-publish npm:release docs",
-    "npm:release": "aegir exec --bail false npm -- publish",
-    "release:rc": "aegir release-rc",
+    "npm:release": "aegir run release --concurrency 1",
     "docs": "aegir docs",
-    "docs:no-publish": "aegir docs --publish false -- --exclude interop --exclude doc"
+    "docs:no-publish": "aegir docs --publish false"
   },
   "devDependencies": {
     "aegir": "^47.0.16",

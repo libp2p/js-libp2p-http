@@ -159,8 +159,6 @@
     "test:webkit": "aegir test -t browser -- --browser webkit",
     "test:firefox-webworker": "aegir test -t webworker -- --browser firefox",
     "dep-check": "aegir dep-check",
-    "doc-check": "aegir doc-check",
-    "docs": "aegir docs",
     "release": "aegir release"
   },
   "dependencies": {
