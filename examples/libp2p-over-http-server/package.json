@@ -15,9 +15,9 @@
     "test": "test-node-example test/*"
   },
   "dependencies": {
-    "@libp2p/http": "~0.0.0",
-    "@libp2p/http-server": "~0.0.0",
-    "@libp2p/http-ping": "~0.0.0",
+    "@libp2p/http": "^1.0.0",
+    "@libp2p/http-server": "^1.0.0",
+    "@libp2p/http-ping": "^1.0.0",
     "libp2p": "^2.8.8"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "@libp2p/http-server",
-  "version": "0.0.0",
+  "version": "1.0.1",
   "description": "HTTP server components",
   "license": "Apache-2.0 OR MIT",
   "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/http-server#readme",
@@ -160,9 +160,9 @@
   },
   "dependencies": {
     "@achingbrain/http-parser-js": "^0.5.9",
-    "@libp2p/http": "~0.0.0",
-    "@libp2p/http-utils": "~0.0.0",
-    "@libp2p/http-websocket": "~0.0.0",
+    "@libp2p/http": "^1.0.0",
+    "@libp2p/http-utils": "^1.0.0",
+    "@libp2p/http-websocket": "^1.0.0",
     "@libp2p/interface": "^2.10.2",
     "events": "^3.3.0",
     "race-event": "^1.3.0",
