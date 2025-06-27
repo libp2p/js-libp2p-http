@@ -181,11 +181,11 @@ export class HTTP implements HTTPInterface, Startable {
 
   private async sendRequest (resource: Multiaddr[] | URL, init: FetchInit): Promise<Response> {
     if (resource instanceof URL) {
-      this.log('making request with global fetch')
+      this.log('making request to %s with global fetch')
       return globalThis.fetch(resource, init)
     }
 
-    this.log('making request with libp2p fetch')
+    this.log('making request to %s with libp2p fetch', resource)
     const host = getHost(resource, getHeaders(init))
 
     // strip http-path tuple but record the value if set

@@ -1,15 +1,3 @@
-export const HTTP_PATH_CODEC = 0x01e1
-export const HTTP_CODEC = 0x01e0
-export const DNS_CODEC = 0x35
-export const DNS4_CODEC = 0x36
-export const DNS6_CODEC = 0x37
-export const DNSADDR_CODEC = 0x38
-export const DNS_CODECS = [
-  DNS_CODEC,
-  DNS4_CODEC,
-  DNS6_CODEC,
-  DNSADDR_CODEC
-]
 export const STATUS_CODES: Record<string, string> = {
   100: 'Continue', // RFC 7231 6.2.1
   101: 'Switching Protocols', // RFC 7231 6.2.2

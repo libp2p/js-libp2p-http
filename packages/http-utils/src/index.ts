@@ -7,7 +7,7 @@
 import { HTTPParser } from '@achingbrain/http-parser-js'
 import { InvalidParametersError, isPeerId, ProtocolError } from '@libp2p/interface'
 import { peerIdFromString } from '@libp2p/peer-id'
-import { fromStringTuples, isMultiaddr, multiaddr } from '@multiformats/multiaddr'
+import { isMultiaddr, multiaddr } from '@multiformats/multiaddr'
 import { multiaddrToUri } from '@multiformats/multiaddr-to-uri'
 import { uriToMultiaddr } from '@multiformats/uri-to-multiaddr'
 import { queuelessPushable } from 'it-queueless-pushable'
@@ -17,10 +17,11 @@ import { base64pad } from 'multiformats/bases/base64'
 import { sha1 } from 'multiformats/hashes/sha1'
 import { Uint8ArrayList } from 'uint8arraylist'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
-import { DNS_CODECS, HTTP_CODEC, HTTP_PATH_CODEC } from './constants.js'
 import { Request } from './request.js'
 import type { AbortOptions, PeerId, Stream } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
+
+const DNS_CODECS = ['dns', 'dns4', 'dns6', 'dnsaddr']
 
 /**
  * A subset of options passed to middleware
@@ -244,9 +245,9 @@ export function toResource (resource: string | URL | PeerId | Multiaddr | Multia
   // check for `/http/` tuple and transform to URL if present
   if (Array.isArray(resource)) {
     for (const ma of resource) {
-      const stringTuples = ma.stringTuples()
+      const components = ma.getComponents()
 
-      if (stringTuples.find(([codec]) => codec === HTTP_CODEC) != null) {
+      if (components.some(({ name }) => name === 'http')) {
         const uri = multiaddrToUri(ma)
         return new URL(`${uri}${path ?? ''}`)
       }
@@ -315,8 +316,8 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
   // try to extract domain from DNS addresses
   if (!isValidHost(host) && Array.isArray(addresses)) {
     for (const address of addresses) {
-      const stringTuples = address.stringTuples()
-      const filtered = stringTuples.filter(([key]) => DNS_CODECS.includes(key))?.[0]?.[1]
+      const components = address.getComponents()
+      const filtered = components.filter(({ name }) => DNS_CODECS.includes(name))?.[0]?.value
 
       if (filtered != null) {
         host = filtered
@@ -377,13 +378,14 @@ export function stripHTTPPath (addresses: Multiaddr[]): { httpPath: string, addr
   // strip http-path tuple but record the value if set
   let httpPath = '/'
   addresses = addresses.map(ma => {
-    return fromStringTuples(
-      ma.stringTuples().filter(t => {
-        if (t[0] === HTTP_PATH_CODEC && t[1] != null) {
-          httpPath = `/${t[1]}`
+    return multiaddr(
+      ma.getComponents().filter(component => {
+        if (component.name === 'http-path') {
+          httpPath = component.value ?? '/'
+          return false
         }
 
-        return t[0] !== HTTP_PATH_CODEC
+        return true
       })
     )
   })
