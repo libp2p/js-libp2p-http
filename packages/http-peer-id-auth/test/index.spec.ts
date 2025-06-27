@@ -2,10 +2,10 @@
 import { generateKeyPair, privateKeyFromProtobuf } from '@libp2p/crypto/keys'
 import { peerIdFromPrivateKey } from '@libp2p/peer-id'
 import { expect } from 'aegir/chai'
-import { toString as uint8ArrayToString, fromString as uint8ArrayFromString } from 'uint8arrays'
+import { fromString as uint8ArrayFromString } from 'uint8arrays'
 import { ClientInitiatedHandshake, ServerInitiatedHandshake } from '../src/client.js'
 import { PEER_ID_AUTH_SCHEME, createServerChallenge, serverResponds } from '../src/index.js'
-import { sign } from '../src/utils.js'
+import { sign, verify } from '../src/utils.js'
 import type { PeerId, PrivateKey } from '@libp2p/interface'
 
 describe('@libp2p/http-peer-id-auth', () => {
@@ -96,6 +96,27 @@ describe('@libp2p/http-peer-id-auth', () => {
       ['client-public-key', clientPubKeyEncoded],
       ['hostname', 'example.com']
     ])
-    expect(uint8ArrayToString(serverSig, 'base64urlpad')).to.equal('UA88qZbLUzmAxrD9KECbDCgSKAUBAvBHrOCF2X0uPLR1uUCF7qGfLPc7dw3Olo-LaFCDpk5sXN7TkLWPVvuXAA==')
+
+    await expect(verify(serverKey.publicKey, PEER_ID_AUTH_SCHEME, [
+      // cspell:disable-next-line
+      ['challenge-server', 'ERERERERERERERERERERERERERERERERERERERERERE='],
+      ['client-public-key', clientPubKeyEncoded],
+      ['hostname', 'example.com']
+    ], serverSig)).to.eventually.be.true()
+
+    await expect(verify(serverKey.publicKey, PEER_ID_AUTH_SCHEME, [
+      // cspell:disable-next-line
+      ['challenge-server', 'ERERERERERERERERERERERERERERERERERERERERERE='],
+      ['client-public-key', clientPubKeyEncoded],
+      ['hostname', 'example.com']
+    ], uint8ArrayFromString('UA88qZbLUzmAxrD9KECbDCgSKAUBAvBHrOCF2X0uPLR1uUCF7qGfLPc7dw3Olo-LaFCDpk5sXN7TkLWPVvuXAA==', 'base64urlpad'))).to.eventually.be.true()
+
+    // TODO: safari generates non-deterministic different signatures?
+    await expect(verify(serverKey.publicKey, PEER_ID_AUTH_SCHEME, [
+      // cspell:disable-next-line
+      ['challenge-server', 'ERERERERERERERERERERERERERERERERERERERERERE='],
+      ['client-public-key', clientPubKeyEncoded],
+      ['hostname', 'example.com']
+    ], uint8ArrayFromString('hq3aR3scVMt8VrRopWYJHHJsEerdqnt-f_JvNQJ6R09yRy57Ut9_7G30TRHUqBtJb_Eh5kq3P5VvPWVQW43fBA==', 'base64urlpad'))).to.eventually.be.true()
   })
 })
