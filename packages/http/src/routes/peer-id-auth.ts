@@ -26,6 +26,8 @@ interface PeerIdAuthInit {
   /**
    * If true, and the client has not initiated the HTTP PeerId Auth handshake,
    * have the server do it.
+   *
+   * @default true
    */
   requireAuth?: boolean
 }
@@ -41,22 +43,24 @@ export class PeerIdAuth {
     this.components = components
     this.log = components.logger.forComponent('libp2p:http:server-peer-id-auth')
     this.tokenTTL = init.tokenTTL ?? DEFAULT_AUTH_TOKEN_TTL
-    this.requireAuth = init.requireAuth ?? false
+    this.requireAuth = init.requireAuth ?? true
     this.verifyHostname = init.verifyHostname ?? (() => true)
   }
 
-  public async authenticateRequest (hostname: string, authHeader?: string | null): Promise<AuthenticationResult> {
+  public async authenticateRequest (hostname: string, method: string, authHeader?: string | null): Promise<AuthenticationResult> {
     if (!(await this.verifyHostname(hostname))) {
       this.log.error('hostname verification failed')
       return { status: 400 }
     }
 
     if (authHeader == null || authHeader === '') {
-      if (this.requireAuth) {
-        return this.returnChallenge(hostname)
+      // OPTIONS is used by preflight request - cannot enforce auth on it as
+      // browsers throw "failed to fetch" errors
+      if (method === 'OPTIONS' || this.requireAuth === false) {
+        return { status: 200 }
       }
 
-      return { status: 200 }
+      return this.returnChallenge(hostname)
     }
 
     try {
@@ -280,7 +284,7 @@ export function authenticatedRoute (handler: OptionallyAuthenticatedEndpoint | A
       const next = initializeRoute<AuthenticatedHTTPRequestHandler | OptionallyAuthenticatedHTTPRequestHandler>(handler, components)
 
       return async (req: Request): Promise<Response> => {
-        const authResult = await auth.authenticateRequest(readHostname(req), req.headers.get('Authorization'))
+        const authResult = await auth.authenticateRequest(readHostname(req), req.method, req.headers.get('Authorization'))
 
         return authenticate(req, authResult, handlerMethods, next)
       }
@@ -322,7 +326,7 @@ export function authenticatedWebSocketRoute (handler: OptionallyAuthenticatedWeb
 
         // TODO: we should have a way of doing this before the websocket upgrade
         // has been negotiated
-        auth.authenticateRequest(readHostname(ws), readProtocol(ws))
+        auth.authenticateRequest(readHostname(ws), '', readProtocol(ws))
           .then(authResult => {
             next.handler(ws, authResult.peer)
           })
@@ -332,7 +336,7 @@ export function authenticatedWebSocketRoute (handler: OptionallyAuthenticatedWeb
       }
 
       return async (req: Request): Promise<Response> => {
-        const authResult = await auth.authenticateRequest(readHostname(req), readAuthorization(req) ?? readSecWebSocketProtocol(req))
+        const authResult = await auth.authenticateRequest(readHostname(req), req.method, readAuthorization(req) ?? readSecWebSocketProtocol(req))
 
         return authenticate(req, authResult, handlerMethods, {
           ...next,
