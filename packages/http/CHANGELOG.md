@@ -1,3 +1,9 @@
+## [@libp2p/http-v1.0.3](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-1.0.2...@libp2p/http-1.0.3) (2025-06-27)
+
+### Bug Fixes
+
+* require auth when set ([#118](https://github.com/libp2p/js-libp2p-http/issues/118)) ([bc02fe7](https://github.com/libp2p/js-libp2p-http/commit/bc02fe7b07208dfcb575eb439775f25b98331c36))
+
 ## [@libp2p/http-v1.0.2](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-1.0.1...@libp2p/http-1.0.2) (2025-06-27)
 
 ### Bug Fixes
