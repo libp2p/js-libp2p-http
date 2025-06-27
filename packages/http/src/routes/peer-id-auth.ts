@@ -56,11 +56,11 @@ export class PeerIdAuth {
     if (authHeader == null || authHeader === '') {
       // OPTIONS is used by preflight request - cannot enforce auth on it as
       // browsers throw "failed to fetch" errors
-      if (method != 'OPTIONS' && this.requireAuth !== false) {
-        return this.returnChallenge(hostname)
+      if (method === 'OPTIONS' || this.requireAuth === false) {
+        return { status: 200 }
       }
 
-      return { status: 200 }
+      return this.returnChallenge(hostname)
     }
 
     try {
