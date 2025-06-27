@@ -26,6 +26,8 @@ interface PeerIdAuthInit {
   /**
    * If true, and the client has not initiated the HTTP PeerId Auth handshake,
    * have the server do it.
+   *
+   * @default true
    */
   requireAuth?: boolean
 }
@@ -41,7 +43,7 @@ export class PeerIdAuth {
     this.components = components
     this.log = components.logger.forComponent('libp2p:http:server-peer-id-auth')
     this.tokenTTL = init.tokenTTL ?? DEFAULT_AUTH_TOKEN_TTL
-    this.requireAuth = init.requireAuth ?? false
+    this.requireAuth = init.requireAuth ?? true
     this.verifyHostname = init.verifyHostname ?? (() => true)
   }
 
@@ -52,7 +54,7 @@ export class PeerIdAuth {
     }
 
     if (authHeader == null || authHeader === '') {
-      if (this.requireAuth) {
+      if (this.requireAuth !== false) {
         return this.returnChallenge(hostname)
       }
 
