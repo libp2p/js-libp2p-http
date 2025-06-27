@@ -2,7 +2,7 @@
 import { generateKeyPair, privateKeyFromProtobuf } from '@libp2p/crypto/keys'
 import { peerIdFromPrivateKey } from '@libp2p/peer-id'
 import { expect } from 'aegir/chai'
-import { toString as uint8ArrayToString, fromString as uint8ArrayFromString } from 'uint8arrays'
+import { fromString as uint8ArrayFromString } from 'uint8arrays'
 import { ClientInitiatedHandshake, ServerInitiatedHandshake } from '../src/client.js'
 import { PEER_ID_AUTH_SCHEME, createServerChallenge, serverResponds } from '../src/index.js'
 import { sign, verify } from '../src/utils.js'
