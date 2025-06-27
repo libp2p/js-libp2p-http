@@ -62,11 +62,14 @@ func runServer(privKey crypto.PrivKey) error {
 }
 
 func runClient(privKey crypto.PrivKey) error {
+	log.Printf("run auth")
 	auth := httpauth.ClientPeerIDAuth{PrivKey: privKey}
+	log.Printf("run log")
 	req, err := http.NewRequest("GET", "http://localhost:8001/log-my-id", nil)
 	if err != nil {
 		return err
 	}
+	log.Printf("auth do")
 	serverID, _, err := auth.AuthenticatedDo(http.DefaultClient, req)
 	if err != nil {
 		return err

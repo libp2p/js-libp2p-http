@@ -1,0 +1,68 @@
+{
+  "name": "@libp2p/http-interop",
+  "version": "0.0.0",
+  "description": "Interop tests for the @libp2p/http collection of modules",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/interop#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/libp2p/js-libp2p-http.git"
+  },
+  "bugs": {
+    "url": "https://github.com/libp2p/js-libp2p-http/issues"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "aegir build",
+    "clean": "aegir clean",
+    "lint": "aegir lint",
+    "test": "aegir test",
+    "test:chrome": "aegir test -t browser --cov",
+    "test:firefox": "aegir test -t browser --browser firefox --cov",
+    "test:node": "aegir test -t node --cov",
+    "test:electron-main": "aegir test -t electron-main",
+    "test:chrome-webworker": "aegir test -t webworker",
+    "test:webkit": "aegir test -t browser -- --browser webkit",
+    "test:firefox-webworker": "aegir test -t webworker -- --browser firefox",
+    "dep-check": "aegir dep-check"
+  },
+  "devDependencies": {
+    "@chainsafe/libp2p-noise": "^16.1.3",
+    "@chainsafe/libp2p-yamux": "^7.0.1",
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/websocket": "^11.1.0",
+    "@libp2p/crypto": "^5.1.4",
+    "@libp2p/http": "^1.0.0",
+    "@libp2p/http-ping": "^1.0.0",
+    "@libp2p/http-server": "^1.0.0",
+    "@libp2p/interface": "^2.10.2",
+    "@libp2p/memory": "^1.1.9",
+    "@libp2p/peer-id": "^5.1.5",
+    "@libp2p/ping": "^2.0.32",
+    "@libp2p/websockets": "^9.2.13",
+    "@multiformats/multiaddr": "^12.4.0",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/express": "^5.0.2",
+    "@types/ws": "^8.18.1",
+    "aegir": "^47.0.16",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "fastify": "^5.3.3",
+    "libp2p": "^2.8.8",
+    "p-defer": "^4.0.1",
+    "p-event": "^6.0.1",
+    "sinon": "^20.0.0",
+    "ws": "^8.18.2"
+  },
+  "browser": {
+    "./dist/src/auth/agent.js": "./dist/src/auth/agent.browser.js",
+    "./dist/src/http.js": "./dist/src/http.browser.js",
+    "./dist/src/http/index.js": "./dist/src/http/index.browser.js",
+    "./dist/test/index.spec.js": "./dist/test/index.browser.spec.js",
+    "node:stream": "readable-stream",
+    "node:http": false,
+    "undici": false
+  },
+  "private": true,
+  "sideEffects": false
+}

@@ -1,8 +1,13 @@
 {
-  "entryPoints": [
-    "./src/index.ts",
-    "./src/auth/index.ts",
-    "./src/ping.ts",
-    "./src/well-known-handler.ts"
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "@libp2p/http",
+  "readme": "./README.md",
+  "headings": {
+    "readme": false,
+    "document": false
+  },
+  "exclude": [
+    "examples/*",
+    "packages/interop"
   ]
 }

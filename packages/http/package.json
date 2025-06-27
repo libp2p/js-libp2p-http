@@ -1,0 +1,182 @@
+{
+  "name": "@libp2p/http",
+  "version": "1.0.3",
+  "description": "Accept HTTP requests over libp2p streams or use libp2p protocols over HTTP",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/http#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/libp2p/js-libp2p-http.git"
+  },
+  "bugs": {
+    "url": "https://github.com/libp2p/js-libp2p-http/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "types": "./dist/src/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "dist/*",
+        "dist/src/*",
+        "dist/src/*/index"
+      ],
+      "src/*": [
+        "*",
+        "dist/*",
+        "dist/src/*",
+        "dist/src/*/index"
+      ]
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "!dist/test",
+    "!**/*.tsbuildinfo"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./middleware": {
+      "types": "./dist/src/middleware/index.d.ts",
+      "import": "./dist/src/middleware/index.js"
+    },
+    "./routes": {
+      "types": "./dist/src/routes/index.d.ts",
+      "import": "./dist/src/routes/index.js"
+    }
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      [
+        "@semantic-release/commit-analyzer",
+        {
+          "preset": "conventionalcommits",
+          "releaseRules": [
+            {
+              "breaking": true,
+              "release": "major"
+            },
+            {
+              "revert": true,
+              "release": "patch"
+            },
+            {
+              "type": "feat",
+              "release": "minor"
+            },
+            {
+              "type": "fix",
+              "release": "patch"
+            },
+            {
+              "type": "docs",
+              "release": "patch"
+            },
+            {
+              "type": "test",
+              "release": "patch"
+            },
+            {
+              "type": "deps",
+              "release": "patch"
+            },
+            {
+              "scope": "no-release",
+              "release": false
+            }
+          ]
+        }
+      ],
+      [
+        "@semantic-release/release-notes-generator",
+        {
+          "preset": "conventionalcommits",
+          "presetConfig": {
+            "types": [
+              {
+                "type": "feat",
+                "section": "Features"
+              },
+              {
+                "type": "fix",
+                "section": "Bug Fixes"
+              },
+              {
+                "type": "chore",
+                "section": "Trivial Changes"
+              },
+              {
+                "type": "docs",
+                "section": "Documentation"
+              },
+              {
+                "type": "deps",
+                "section": "Dependencies"
+              },
+              {
+                "type": "test",
+                "section": "Tests"
+              }
+            ]
+          }
+        }
+      ],
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "CHANGELOG.md",
+            "package.json"
+          ]
+        }
+      ]
+    ]
+  },
+  "scripts": {
+    "build": "aegir build",
+    "clean": "aegir clean",
+    "lint": "aegir lint",
+    "test": "aegir test",
+    "test:chrome": "aegir test -t browser --cov",
+    "test:firefox": "aegir test -t browser --browser firefox --cov",
+    "test:node": "aegir test -t node --cov",
+    "test:electron-main": "aegir test -t electron-main",
+    "test:chrome-webworker": "aegir test -t webworker",
+    "test:webkit": "aegir test -t browser -- --browser webkit",
+    "test:firefox-webworker": "aegir test -t webworker -- --browser firefox",
+    "dep-check": "aegir dep-check",
+    "release": "aegir release"
+  },
+  "dependencies": {
+    "@libp2p/http-fetch": "^3.0.0",
+    "@libp2p/http-peer-id-auth": "^1.0.0",
+    "@libp2p/http-utils": "^1.0.0",
+    "@libp2p/http-websocket": "^1.0.0",
+    "@libp2p/interface": "^2.10.2",
+    "@libp2p/interface-internal": "^2.3.14",
+    "@multiformats/multiaddr": "^12.4.0",
+    "cookie": "^1.0.2",
+    "undici": "^6.21.3"
+  },
+  "devDependencies": {
+    "aegir": "^47.0.16"
+  },
+  "browser": {
+    "./dist/src/http.js": "./dist/src/http.browser.js"
+  },
+  "sideEffects": false
+}
