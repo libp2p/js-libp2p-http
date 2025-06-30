@@ -1,7 +1,6 @@
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { circuitRelayTransport } from '@libp2p/circuit-relay-v2'
-import { devToolsMetrics } from '@libp2p/devtools-metrics'
 import { http } from '@libp2p/http'
 import { nodeServer } from '@libp2p/http-server'
 import { createServer } from '@libp2p/http-server/node'
@@ -91,8 +90,7 @@ const libp2p = await createLibp2p({
       server: nodeServer(server)
     }),
     ping: ping()
-  },
-  metrics: devToolsMetrics()
+  }
 })
 
 // update listening addresses
