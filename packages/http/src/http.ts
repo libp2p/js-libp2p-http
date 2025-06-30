@@ -67,6 +67,7 @@ class Libp2pAgent extends NodeAgent {
     this.peer = init.peer
   }
 
+  // @ts-expect-error types are wrong
   createConnection (options: TcpNetConnectOpts, cb: (err?: Error, socket?: Socket) => void): void {
     createConnection(this.components.connectionManager, this.peer, options)
       .then(socket => {
@@ -88,6 +89,7 @@ export class HTTP extends HTTPBrowser implements HTTPInterface {
       return new NodeAgent(options)
     }
 
+    // @ts-expect-error types are wrong
     return new Libp2pAgent(this.components, {
       ...options,
       peer
