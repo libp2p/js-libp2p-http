@@ -31,7 +31,7 @@
     "@libp2p/webrtc": "^5.2.15",
     "@libp2p/websockets": "^9.2.13",
     "@multiformats/multiaddr": "^12.4.0",
-    "@multiformats/multiaddr-matcher": "^1.7.2",
+    "@multiformats/multiaddr-matcher": "^2.0.1",
     "it-byte-stream": "^2.0.2",
     "libp2p": "^2.8.8"
   },
