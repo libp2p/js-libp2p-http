@@ -1,3 +1,9 @@
+## [@libp2p/http-v1.0.5](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-1.0.4...@libp2p/http-1.0.5) (2025-08-05)
+
+### Bug Fixes
+
+* update create connection to match node types ([#119](https://github.com/libp2p/js-libp2p-http/issues/119)) ([9538655](https://github.com/libp2p/js-libp2p-http/commit/953865524f660da1cf351c1a0d05c5308fdf7d84))
+
 ## [@libp2p/http-v1.0.4](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-1.0.3...@libp2p/http-1.0.4) (2025-06-30)
 
 ### Bug Fixes
