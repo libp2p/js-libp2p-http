@@ -1,3 +1,13 @@
+## [@libp2p/http-v1.0.4](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-1.0.3...@libp2p/http-1.0.4) (2025-06-30)
+
+### Bug Fixes
+
+* ignore create connection types ([#120](https://github.com/libp2p/js-libp2p-http/issues/120)) ([6a99d83](https://github.com/libp2p/js-libp2p-http/commit/6a99d836a07bb6c0d3cb295a2b0b748e65ff8493))
+
+### Dependencies
+
+* bump undici from 6.21.2 to 7.10.0 ([#95](https://github.com/libp2p/js-libp2p-http/issues/95)) ([e64c3be](https://github.com/libp2p/js-libp2p-http/commit/e64c3bea36362243af37048b3f6ce350053a4e38))
+
 ## [@libp2p/http-v1.0.3](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-1.0.2...@libp2p/http-1.0.3) (2025-06-27)
 
 ### Bug Fixes
