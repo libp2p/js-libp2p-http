@@ -120,7 +120,6 @@ export class HTTP extends HTTPBrowser implements HTTPInterface {
       return new NodeAgent(options)
     }
 
-    // @ts-expect-error types are wrong
     return new Libp2pAgent(this.components, {
       ...options,
       peer
