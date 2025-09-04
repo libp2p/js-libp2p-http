@@ -29,8 +29,8 @@
     "@libp2p/ping": "^2.0.32",
     "@libp2p/webrtc": "^5.2.15",
     "@libp2p/websockets": "^9.2.13",
-    "@multiformats/multiaddr": "^12.4.0",
-    "@multiformats/multiaddr-matcher": "^2.0.1",
+    "@multiformats/multiaddr": "^13.0.1",
+    "@multiformats/multiaddr-matcher": "^3.0.0",
     "it-byte-stream": "^2.0.2",
     "libp2p": "^2.8.8"
   },
