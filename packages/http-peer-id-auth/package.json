@@ -141,7 +141,7 @@
     "@libp2p/crypto": "^5.1.4",
     "@libp2p/interface": "^2.10.2",
     "@libp2p/peer-id": "^5.1.5",
-    "@multiformats/multiaddr": "^12.4.0",
+    "@multiformats/multiaddr": "^13.0.0",
     "uint8-varint": "^2.0.4",
     "uint8arrays": "^5.1.0"
   },

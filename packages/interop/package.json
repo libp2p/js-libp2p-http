@@ -40,7 +40,7 @@
     "@libp2p/peer-id": "^5.1.5",
     "@libp2p/ping": "^2.0.32",
     "@libp2p/websockets": "^9.2.13",
-    "@multiformats/multiaddr": "^12.4.0",
+    "@multiformats/multiaddr": "^13.0.0",
     "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.2",
     "@types/ws": "^8.18.1",

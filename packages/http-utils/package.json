@@ -141,7 +141,7 @@
     "@achingbrain/http-parser-js": "^0.5.9",
     "@libp2p/interface": "^2.10.2",
     "@libp2p/peer-id": "^5.1.5",
-    "@multiformats/multiaddr": "^12.4.0",
+    "@multiformats/multiaddr": "^13.0.0",
     "@multiformats/multiaddr-to-uri": "^11.0.0",
     "@multiformats/uri-to-multiaddr": "^9.0.1",
     "it-byte-stream": "^2.0.2",

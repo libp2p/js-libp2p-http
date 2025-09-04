@@ -143,7 +143,7 @@
     "@libp2p/interface": "^2.10.2",
     "@libp2p/interface-internal": "^2.3.14",
     "@libp2p/utils": "^6.6.5",
-    "@multiformats/multiaddr": "^12.4.0",
+    "@multiformats/multiaddr": "^13.0.0",
     "it-byte-stream": "^2.0.2",
     "multiformats": "^13.3.6",
     "uint8arraylist": "^2.4.8",
