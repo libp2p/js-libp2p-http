@@ -140,12 +140,12 @@
   "dependencies": {
     "@achingbrain/http-parser-js": "^0.5.9",
     "@libp2p/http-utils": "^1.0.0",
-    "@libp2p/interface": "^2.10.2",
+    "@libp2p/interface": "^3.0.0",
     "it-byte-stream": "^2.0.2",
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
-    "@libp2p/logger": "^5.1.18",
+    "@libp2p/logger": "^6.0.0",
     "aegir": "^47.0.16",
     "it-drain": "^3.0.9",
     "it-pair": "^2.0.6",

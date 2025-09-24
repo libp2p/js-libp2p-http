@@ -19,10 +19,10 @@
     "@chainsafe/libp2p-yamux": "^7.0.1",
     "@libp2p/http": "^1.0.0",
     "@libp2p/http-server": "^1.0.0",
-    "@libp2p/tcp": "^10.1.13",
-    "@multiformats/multiaddr": "^12.4.0",
+    "@libp2p/tcp": "^11.0.0",
+    "@multiformats/multiaddr": "^13.0.1",
     "hono": "^4.7.10",
-    "libp2p": "^2.8.8"
+    "libp2p": "^3.0.0"
   },
   "devDependencies": {
     "aegir": "^47.0.16",
