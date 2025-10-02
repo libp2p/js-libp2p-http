@@ -141,10 +141,10 @@
     "@achingbrain/http-parser-js": "^0.5.9",
     "@libp2p/http-utils": "^1.0.0",
     "@libp2p/interface": "^3.0.2",
-    "@libp2p/utils": "^7.0.4",
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
+    "@libp2p/utils": "^7.0.4",
     "aegir": "^47.0.22"
   },
   "sideEffects": false

@@ -19,7 +19,9 @@ export class Libp2pSocket extends Duplex {
 
   #log?: Logger
 
-  constructor (initStream: Promise<{ stream: Stream, connection: Connection }>) {
+  constructor (stream: Stream, connection: Connection)
+  constructor (initStream: Promise<{ stream: Stream, connection: Connection }>)
+  constructor (...args: any[]) {
     super()
 
     this.bytesRead = 0
@@ -27,32 +29,38 @@ export class Libp2pSocket extends Duplex {
     this.allowHalfOpen = true
     this.remoteAddress = ''
 
-    this.#initStream = initStream.then(({ stream, connection }) => {
-      this.#log = stream.log.newScope('libp2p-socket')
-      this.remoteAddress = connection.remoteAddr.toString()
-
-      stream.addEventListener('message', (evt) => {
-        this.push(evt.data.subarray())
-      })
-
-      stream.addEventListener('close', (evt) => {
-        if (evt.error != null) {
-          this.destroy(evt.error)
-        } else {
-          this.push(null)
-        }
-      })
-
-      stream.pause()
-
-      this.emit('connect')
-
-      return stream
-    })
-      .catch(err => {
+    if (args.length === 2) {
+      this.gotStream({ stream: args[0], connection: args[1] })
+      this.#initStream = Promise.resolve(args[0])
+    } else {
+      this.#initStream = args[0].then(this.gotStream.bind(this), (err: any) => {
         this.emit('error', err)
         throw err
       })
+    }
+  }
+
+  private gotStream ({ stream, connection }: { stream: Stream, connection: Connection }): Stream {
+    this.#log = stream.log.newScope('libp2p-socket')
+    this.remoteAddress = connection.remoteAddr.toString()
+
+    stream.addEventListener('message', (evt) => {
+      this.push(evt.data.subarray())
+    })
+
+    stream.addEventListener('close', (evt) => {
+      if (evt.error != null) {
+        this.destroy(evt.error)
+      } else {
+        this.push(null)
+      }
+    })
+
+    stream.pause()
+
+    this.emit('connect')
+
+    return stream
   }
 
   getStream (cb: (stream: Stream) => void): void {
@@ -233,5 +241,5 @@ export class Libp2pSocket extends Duplex {
 }
 
 export function streamToSocket (stream: Stream, connection: Connection): Socket {
-  return new Libp2pSocket(Promise.resolve({ stream, connection }))
+  return new Libp2pSocket(stream, connection)
 }

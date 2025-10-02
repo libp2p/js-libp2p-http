@@ -6,7 +6,6 @@
  * socket.
  */
 
-import { byteStream } from '@libp2p/utils'
 import { readResponse } from './read-response.js'
 import { sendRequest } from './send-request.js'
 import type { Logger, Stream } from '@libp2p/interface'
@@ -29,15 +28,19 @@ export interface SendRequestInit extends RequestInit {
 export async function fetch (stream: Stream, resource: string | URL, init: FetchInit = {}): Promise<Response> {
   const log = stream.log.newScope('http-fetch')
   resource = typeof resource === 'string' ? new URL(resource) : resource
-  const bytes = byteStream(stream)
 
-  await sendRequest(bytes, resource, {
-    ...init,
-    log
-  })
+  const [
+    response
+  ] = await Promise.all([
+    readResponse(stream, resource, {
+      ...init,
+      log
+    }),
+    sendRequest(stream, resource, {
+      ...init,
+      log
+    })
+  ])
 
-  return readResponse(bytes, resource, {
-    ...init,
-    log
-  })
+  return response
 }
