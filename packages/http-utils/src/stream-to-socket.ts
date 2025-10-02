@@ -1,115 +1,157 @@
 import { Duplex } from 'node:stream'
-import { byteStream } from 'it-byte-stream'
-import type { Connection, Stream } from '@libp2p/interface'
+import type { Connection, Logger, Stream } from '@libp2p/interface'
 import type { Socket, SocketConnectOpts, AddressInfo, SocketReadyState } from 'node:net'
 
 const MAX_TIMEOUT = 2_147_483_647
 
-class Libp2pSocket extends Duplex {
+export class Libp2pSocket extends Duplex {
   public readonly autoSelectFamilyAttemptedAddresses = []
   public readonly connecting = false
   public readonly pending = false
-  public readonly remoteAddress: string
+  public remoteAddress: string
   public bytesRead: number
   public bytesWritten: number
   public timeout = MAX_TIMEOUT
   public allowHalfOpen: boolean
 
-  private readonly stream: Stream
+  #initStream: Promise<Stream>
+  #stream?: Stream
 
-  constructor (stream: Stream, connection: Connection) {
-    const bytes = byteStream(stream)
+  #log?: Logger
 
-    super({
-      write: (chunk, encoding, cb) => {
-        this.stream.log('write %d bytes', chunk.byteLength)
+  constructor (stream: Stream, connection: Connection)
+  constructor (initStream: Promise<{ stream: Stream, connection: Connection }>)
+  constructor (...args: any[]) {
+    super()
 
-        this.bytesWritten += chunk.byteLength
-        bytes.write(chunk)
+    this.bytesRead = 0
+    this.bytesWritten = 0
+    this.allowHalfOpen = true
+    this.remoteAddress = ''
+
+    if (args.length === 2) {
+      this.gotStream({ stream: args[0], connection: args[1] })
+      this.#initStream = Promise.resolve(args[0])
+    } else {
+      this.#initStream = args[0].then(this.gotStream.bind(this), (err: any) => {
+        this.emit('error', err)
+        throw err
+      })
+    }
+  }
+
+  private gotStream ({ stream, connection }: { stream: Stream, connection: Connection }): Stream {
+    this.#log = stream.log.newScope('libp2p-socket')
+    this.remoteAddress = connection.remoteAddr.toString()
+
+    stream.addEventListener('message', (evt) => {
+      this.push(evt.data.subarray())
+    })
+
+    stream.addEventListener('close', (evt) => {
+      if (evt.error != null) {
+        this.destroy(evt.error)
+      } else {
+        this.push(null)
+      }
+    })
+
+    stream.pause()
+
+    this.emit('connect')
+
+    return stream
+  }
+
+  getStream (cb: (stream: Stream) => void): void {
+    if (this.#stream != null) {
+      cb(this.#stream)
+      return
+    }
+
+    this.#initStream.then(stream => {
+      this.#stream = stream
+      cb(stream)
+    }, (err) => {
+      this.emit('error', err)
+    })
+  }
+
+  destroy (error?: Error): this {
+    return super.destroy(error)
+  }
+
+  _write (chunk: Uint8Array, encoding: string, cb: (err?: Error) => void): void {
+    this.#log?.('write %d bytes', chunk.byteLength)
+
+    this.bytesWritten += chunk.byteLength
+
+    this.getStream(stream => {
+      if (!stream.send(chunk)) {
+        stream.onDrain()
           .then(() => {
             cb()
-          }, err => {
+          }, (err) => {
             cb(err)
           })
-      },
-      read: (size) => {
-        this.stream.log('asked to read %d bytes', size)
+      } else {
+        cb()
+      }
+    })
+  }
 
-        void Promise.resolve().then(async () => {
-          try {
-            while (true) {
-              const chunk = await bytes.read({
-                signal: AbortSignal.timeout(this.timeout)
-              })
+  _read (size: number): void {
+    this.#log?.('asked to read %d bytes', size)
+    this.getStream(stream => {
+      stream.resume()
+    })
+  }
 
-              if (chunk == null) {
-                this.stream.log('socket readable end closed')
-                this.push(null)
-                return
-              }
+  _destroy (err: Error, cb: (err?: Error) => void): void {
+    this.#log?.('destroy with %d bytes buffered - %e', this.bufferSize, err)
 
-              this.bytesRead += chunk.byteLength
-
-              this.stream.log('socket read %d bytes', chunk.byteLength)
-              const more = this.push(chunk.subarray())
-
-              if (!more) {
-                break
-              }
-            }
-          } catch (err: any) {
-            this.destroy(err)
-          }
-        })
-      },
-      destroy: (err, cb) => {
-        this.stream.log('destroy with %d bytes buffered - %e', this.bufferSize, err)
-
-        if (err != null) {
-          bytes.unwrap().abort(err)
-          cb()
-        } else {
-          bytes.unwrap().close()
-            .then(() => {
-              cb()
-            })
-            .catch(err => {
-              stream.abort(err)
-              cb(err)
-            })
-        }
-      },
-      final: (cb) => {
-        this.stream.log('final')
-
-        bytes.unwrap().closeWrite()
+    this.getStream(stream => {
+      if (err != null) {
+        stream.abort(err)
+        cb()
+      } else {
+        stream.close()
           .then(() => {
             cb()
           })
           .catch(err => {
-            bytes.unwrap().abort(err)
+            stream.abort(err)
             cb(err)
           })
       }
     })
+  }
 
-    this.stream = stream
-    this.remoteAddress = connection.remoteAddr.toString()
-    this.bytesRead = 0
-    this.bytesWritten = 0
-    this.allowHalfOpen = true
+  _final (cb: (err?: Error) => void): void {
+    this.#log?.('final')
+
+    this.getStream(stream => {
+      stream.close()
+        .then(() => {
+          cb()
+        })
+        .catch(err => {
+          stream.abort(err)
+          cb(err)
+        })
+    })
   }
 
   public get readyState (): SocketReadyState {
-    if (this.stream.status === 'closed') {
+    if (this.#stream?.status === 'closed') {
       return 'closed'
     }
 
-    if (this.stream.writeStatus === 'closed' || this.stream.writeStatus === 'closing') {
+    if (this.#stream?.writeStatus === 'closed' || this.#stream?.writeStatus === 'closing') {
       return 'readOnly'
     }
 
-    if (this.stream.readStatus === 'closed' || this.stream.readStatus === 'closing') {
+    if (this.#stream?.readStatus === 'closed' || this.#stream?.readStatus === 'closing') {
       return 'writeOnly'
     }
 
@@ -121,7 +163,7 @@ class Libp2pSocket extends Duplex {
   }
 
   destroySoon (): void {
-    this.stream.log('destroySoon with %d bytes buffered', this.bufferSize)
+    this.#log?.('destroySoon with %d bytes buffered', this.bufferSize)
     this.destroy()
   }
 
@@ -130,24 +172,27 @@ class Libp2pSocket extends Duplex {
   connect (port: number, connectionListener?: () => void): this
   connect (path: string, connectionListener?: () => void): this
   connect (...args: any[]): this {
-    this.stream.log('connect %o', args)
+    this.#log?.('connect %o', args)
     return this
   }
 
   setEncoding (encoding?: BufferEncoding): this {
-    this.stream.log('setEncoding %s', encoding)
+    this.#log?.('setEncoding %s', encoding)
     return this
   }
 
   resetAndDestroy (): this {
-    this.stream.log('resetAndDestroy')
-    this.stream.abort(new Error('Libp2pSocket.resetAndDestroy'))
+    this.#log?.('resetAndDestroy')
+
+    this.getStream(stream => {
+      stream.abort(new Error('Libp2pSocket.resetAndDestroy'))
+    })
 
     return this
   }
 
   setTimeout (timeout: number, callback?: () => void): this {
-    this.stream.log('setTimeout %d', timeout)
+    this.#log?.('setTimeout %d', timeout)
 
     if (callback != null) {
       this.addListener('timeout', callback)
@@ -159,31 +204,31 @@ class Libp2pSocket extends Duplex {
   }
 
   setNoDelay (noDelay?: boolean): this {
-    this.stream.log('setNoDelay %b', noDelay)
+    this.#log?.('setNoDelay %b', noDelay)
 
     return this
   }
 
   setKeepAlive (enable?: boolean, initialDelay?: number): this {
-    this.stream.log('setKeepAlive %b %d', enable, initialDelay)
+    this.#log?.('setKeepAlive %b %d', enable, initialDelay)
 
     return this
   }
 
   address (): AddressInfo | Record<string, any> {
-    this.stream.log('address')
+    this.#log?.('address')
 
     return {}
   }
 
   unref (): this {
-    this.stream.log('unref')
+    this.#log?.('unref')
 
     return this
   }
 
   ref (): this {
-    this.stream.log('ref')
+    this.#log?.('ref')
 
     return this
   }

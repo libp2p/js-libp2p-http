@@ -7,18 +7,19 @@
 import { HTTPParser } from '@achingbrain/http-parser-js'
 import { InvalidParametersError, isPeerId, ProtocolError } from '@libp2p/interface'
 import { peerIdFromString } from '@libp2p/peer-id'
-import { isMultiaddr, multiaddr } from '@multiformats/multiaddr'
+import { getNetConfig } from '@libp2p/utils'
+import { CODE_P2P, isMultiaddr, multiaddr } from '@multiformats/multiaddr'
 import { multiaddrToUri } from '@multiformats/multiaddr-to-uri'
 import { uriToMultiaddr } from '@multiformats/uri-to-multiaddr'
-import { queuelessPushable } from 'it-queueless-pushable'
 import itToBrowserReadableStream from 'it-to-browser-readablestream'
 import { base36 } from 'multiformats/bases/base36'
 import { base64pad } from 'multiformats/bases/base64'
 import { sha1 } from 'multiformats/hashes/sha1'
+import { raceEvent } from 'race-event'
 import { Uint8ArrayList } from 'uint8arraylist'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
 import { Request } from './request.js'
-import type { AbortOptions, PeerId, Stream } from '@libp2p/interface'
+import type { AbortOptions, PeerId, Stream, StreamMessageEvent } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
 const DNS_CODECS = ['dns', 'dns4', 'dns6', 'dnsaddr']
@@ -89,10 +90,10 @@ export function streamToRequest (info: HeaderInfo, stream: Stream): globalThis.R
   }
 
   if ((init.method !== 'GET' || info.upgrade) && init.method !== 'HEAD') {
-    let source: AsyncGenerator<any> = stream.source
+    let source: AsyncIterable<any> = stream
 
     if (!info.upgrade) {
-      source = takeBytes(stream.source, info.headers.get('content-length'))
+      source = takeBytes(stream, info.headers.get('content-length'))
     }
 
     init.body = itToBrowserReadableStream<Uint8Array>(source)
@@ -104,13 +105,7 @@ export function streamToRequest (info: HeaderInfo, stream: Stream): globalThis.R
 }
 
 export async function responseToStream (res: Response, stream: Stream): Promise<void> {
-  const pushable = queuelessPushable<Uint8Array>()
-  stream.sink(pushable)
-    .catch(err => {
-      stream.abort(err)
-    })
-
-  await pushable.push(uint8ArrayFromString([
+  stream.send(uint8ArrayFromString([
     `HTTP/1.1 ${res.status} ${res.statusText}`,
     ...writeHeaders(res.headers),
     '',
@@ -118,28 +113,29 @@ export async function responseToStream (res: Response, stream: Stream): Promise<
   ].join('\r\n')))
 
   if (res.body == null) {
-    await pushable.end()
+    await stream.close().catch(err => {
+      stream.abort(err)
+    })
     return
   }
 
   const reader = res.body.getReader()
-  let result = await reader.read()
 
   while (true) {
+    const result = await reader.read()
+
     if (result.value != null) {
-      await pushable.push(result.value)
+      if (!stream.send(result.value)) {
+        await stream.onDrain()
+      }
     }
 
     if (result.done) {
       break
     }
-
-    result = await reader.read()
   }
 
-  await pushable.end()
-
-  await stream.closeWrite()
+  await stream.close()
     .catch(err => {
       stream.abort(err)
     })
@@ -187,7 +183,7 @@ export function writeHeaders (headers: Headers): string[] {
   return output
 }
 
-async function * takeBytes (source: AsyncGenerator<Uint8ArrayList>, bytes?: number | string | null): AsyncGenerator<Uint8Array> {
+async function * takeBytes (source: AsyncIterable<Uint8Array | Uint8ArrayList>, bytes?: number | string | null): AsyncGenerator<Uint8Array> {
   bytes = parseInt(`${bytes ?? ''}`)
 
   if (bytes == null || isNaN(bytes)) {
@@ -329,12 +325,16 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
   // try to use remote PeerId as domain
   if (!isValidHost(host) && Array.isArray(addresses)) {
     for (const address of addresses) {
-      const peerStr = address.getPeerId()
+      const peerStr = address.getComponents()
+        .findLast(c => c.code === CODE_P2P)?.value
 
       // try to extract port from multiaddr if it is available
       try {
-        const options = address.toOptions()
-        port = options.port
+        const config = getNetConfig(address)
+
+        if (config.port != null) {
+          port = config.port
+        }
       } catch {}
 
       if (peerStr != null) {
@@ -350,9 +350,11 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
   if (!isValidHost(host) && Array.isArray(addresses)) {
     for (const address of addresses) {
       try {
-        const options = address.toOptions()
+        const config = getNetConfig(address)
 
-        host = options.host
+        if (config.host != null) {
+          host = config.host
+        }
         break
       } catch {}
     }
@@ -490,55 +492,57 @@ export async function getServerUpgradeHeaders (headers: Headers | Record<string,
 /**
  * Reads HTTP headers from an incoming stream
  */
-export async function readHeaders (stream: Stream): Promise<HeaderInfo> {
-  return new Promise<any>((resolve, reject) => {
-    const parser = new HTTPParser('REQUEST')
-    const source = queuelessPushable<Uint8ArrayList>()
-    const earlyData = new Uint8ArrayList()
-    let headersComplete = false
+export async function readHeaders (stream: Stream, options?: AbortOptions): Promise<HeaderInfo> {
+  const parser = new HTTPParser('REQUEST')
+  const earlyData = new Uint8ArrayList()
+  let headerInfo: HeaderInfo | undefined
 
-    parser[HTTPParser.kOnHeadersComplete] = (info) => {
-      headersComplete = true
-      const headers = new Headers()
+  parser[HTTPParser.kOnHeadersComplete] = (info) => {
+    const headers = new Headers()
 
-      // set incoming headers
-      for (let i = 0; i < info.headers.length; i += 2) {
-        headers.set(info.headers[i].toLowerCase(), info.headers[i + 1])
-      }
-
-      resolve({
-        ...info,
-        headers,
-        raw: earlyData,
-        method: HTTPParser.methods[info.method]
-      })
+    // set incoming headers
+    for (let i = 0; i < info.headers.length; i += 2) {
+      headers.set(info.headers[i].toLowerCase(), info.headers[i + 1])
     }
 
-    // replace source with request body
-    const streamSource = stream.source
-    stream.source = source
+    headerInfo = {
+      ...info,
+      headers,
+      raw: earlyData,
+      method: HTTPParser.methods[info.method]
+    }
+  }
 
-    Promise.resolve().then(async () => {
-      for await (const chunk of streamSource) {
-        // only use the message parser until the headers have been read
-        if (!headersComplete) {
-          earlyData.append(chunk)
-          parser.execute(chunk.subarray())
-        } else {
-          await source.push(new Uint8ArrayList(chunk))
-        }
+  try {
+    while (true) {
+      const { data } = await raceEvent<StreamMessageEvent>(stream, 'message', options?.signal)
+      const buf = data.subarray()
+
+      const read = parser.execute(buf, 0, buf.byteLength)
+
+      if (read instanceof Error) {
+        throw read
       }
 
-      await source.end()
-    })
-      .catch((err: Error) => {
-        stream.abort(err)
-        reject(err)
-      })
-      .finally(() => {
-        parser.finish()
-      })
-  })
+      // collect raw header bytes
+      earlyData.append(buf.subarray(0, read))
+
+      if (read < buf.byteLength) {
+        // reading headers finished and we have early data
+        stream.push(buf.subarray(read))
+      }
+
+      if (headerInfo != null) {
+        return headerInfo
+      }
+    }
+  } catch (err: any) {
+    stream.abort(err)
+  } finally {
+    parser.finish()
+  }
+
+  throw new Error('Failed to read header info from request')
 }
 
 /**

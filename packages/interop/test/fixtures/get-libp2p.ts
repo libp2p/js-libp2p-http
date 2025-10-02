@@ -134,6 +134,9 @@ export async function getClient (): Promise<Libp2p<{ http: HTTP }>> {
       http: http(),
       ping: ping(),
       pingHTTP: pingHTTP()
+    },
+    connectionGater: {
+      denyDialMultiaddr: () => false
     }
   })
 }
@@ -150,6 +153,9 @@ export async function getLibp2pOverHttpHandler (): Promise< Libp2p<{ http: HTTP,
     },
     connectionManager: {
       inboundConnectionThreshold: Infinity
+    },
+    connectionGater: {
+      denyDialMultiaddr: () => false
     }
   })
 

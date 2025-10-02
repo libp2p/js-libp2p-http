@@ -1,5 +1,5 @@
 import { Agent as NodeAgent } from 'node:http'
-import { streamToSocket, toResource } from '@libp2p/http-utils'
+import { Libp2pSocket, toResource } from '@libp2p/http-utils'
 import { isPeerId } from '@libp2p/interface'
 import { Agent as UndiciAgent } from 'undici'
 import { HTTP_PROTOCOL } from './constants.js'
@@ -10,15 +10,21 @@ import type { ConnectionManager, Registrar } from '@libp2p/interface-internal'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Agent, AgentOptions } from 'node:http'
 import type { Socket, TcpNetConnectOpts } from 'node:net'
+import type { Duplex } from 'node:stream'
 import type { Dispatcher } from 'undici'
 
 export type { HTTPComponents } from './http.browser.js'
 
-async function createConnection (connectionManager: ConnectionManager, peer: PeerId | Multiaddr | Multiaddr[], options?: AbortOptions): Promise<Socket> {
-  const connection = await connectionManager.openConnection(peer, options)
-  const stream = await connection.newStream(HTTP_PROTOCOL, options)
+function createConnection (connectionManager: ConnectionManager, peer: PeerId | Multiaddr | Multiaddr[], options?: AbortOptions): Socket {
+  return new Libp2pSocket(
+    Promise.resolve()
+      .then(async () => {
+        const connection = await connectionManager.openConnection(peer, options)
+        const stream = await connection.newStream(HTTP_PROTOCOL, options)
 
-  return streamToSocket(stream, connection)
+        return { stream, connection }
+      })
+  )
 }
 
 interface HTTPDispatcherComponents {
@@ -34,15 +40,24 @@ export class Libp2pDispatcher extends UndiciAgent {
     super({
       ...init,
       connect: (options, cb) => {
-        createConnection(components.connectionManager, init.peer, {
+        const socket = createConnection(components.connectionManager, init.peer, {
           // @ts-expect-error types are wonky
           signal: options.timeout != null ? AbortSignal.timeout(options.timeout) : undefined
         })
-          .then(socket => {
-            cb(null, socket)
-          }, err => {
-            cb(err, null)
-          })
+
+        const onConnect = (): void => {
+          socket.removeListener('error', onError)
+          socket.removeListener('connect', onConnect)
+          cb(null, socket)
+        }
+        const onError = (err: Error): void => {
+          socket.removeListener('error', onError)
+          socket.removeListener('connect', onConnect)
+          cb(err, null)
+        }
+
+        socket.addListener('connect', onConnect)
+        socket.addListener('error', onError)
       }
     })
   }
@@ -67,14 +82,24 @@ class Libp2pAgent extends NodeAgent {
     this.peer = init.peer
   }
 
-  // @ts-expect-error types are wrong
-  createConnection (options: TcpNetConnectOpts, cb: (err?: Error, socket?: Socket) => void): void {
-    createConnection(this.components.connectionManager, this.peer, options)
-      .then(socket => {
-        cb(undefined, socket)
-      }, err => {
-        cb(err)
-      })
+  createConnection (options: TcpNetConnectOpts, cb: (err: Error | null, socket: Duplex) => void): Duplex {
+    const socket = createConnection(this.components.connectionManager, this.peer, options)
+
+    const onConnect = (): void => {
+      socket.removeListener('error', onError)
+      socket.removeListener('connect', onConnect)
+      cb(null, socket)
+    }
+    const onError = (err: Error): void => {
+      socket.removeListener('error', onError)
+      socket.removeListener('connect', onConnect)
+      cb(err, socket)
+    }
+
+    socket.addListener('connect', onConnect)
+    socket.addListener('error', onError)
+
+    return socket
   }
 }
 
@@ -89,7 +114,6 @@ export class HTTP extends HTTPBrowser implements HTTPInterface {
       return new NodeAgent(options)
     }
 
-    // @ts-expect-error types are wrong
     return new Libp2pAgent(this.components, {
       ...options,
       peer

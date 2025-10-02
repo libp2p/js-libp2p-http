@@ -1,12 +1,12 @@
 import { HTTPParser } from '@achingbrain/http-parser-js'
 import { Response, BAD_REQUEST, toUint8Array, writeHeaders, getServerUpgradeHeaders } from '@libp2p/http-utils'
-import { InvalidParametersError } from '@libp2p/interface'
+import { InvalidParametersError, StreamMessageEvent } from '@libp2p/interface'
 import { base64pad } from 'multiformats/bases/base64'
+import { raceEvent } from 'race-event'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
 import { StreamWebSocket } from './websocket.js'
 import type { HeaderInfo } from '@libp2p/http-utils'
 import type { AbortOptions, Stream } from '@libp2p/interface'
-import type { ByteStream } from 'it-byte-stream'
 
 export function toBytes (data: string | Blob | Uint8Array | ArrayBuffer | DataView): Uint8Array | Promise<Uint8Array> {
   if (data instanceof Uint8Array || data instanceof ArrayBuffer || data instanceof DataView) {
@@ -34,7 +34,7 @@ export class CodeError extends Error {
   }
 }
 
-export async function readResponse (bytes: ByteStream, options: AbortOptions): Promise<Response> {
+export async function readResponse (stream: Stream, options: AbortOptions): Promise<Response> {
   return new Promise((resolve, reject) => {
     let readHeaders = false
 
@@ -58,17 +58,23 @@ export async function readResponse (bytes: ByteStream, options: AbortOptions): P
     Promise.resolve()
       .then(async () => {
         while (true) {
+          const { data } = await raceEvent<StreamMessageEvent>(stream, 'message', options.signal)
+          const buf = data.subarray()
+
+          const read = parser.execute(buf, 0, buf.byteLength)
+
+          if (read instanceof Error) {
+            throw read
+          }
+
+          if (read < buf.byteLength) {
+            // reading headers finished and we have early data
+            stream.push(buf.subarray(read))
+          }
+
           if (readHeaders) {
             break
           }
-
-          const chunk = await bytes.read(options)
-
-          if (chunk == null) {
-            throw new Error('Stream ended before headers were received')
-          }
-
-          parser.execute(chunk.subarray(), 0, chunk.byteLength)
         }
       })
       .catch((err: Error) => {

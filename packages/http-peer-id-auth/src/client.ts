@@ -6,8 +6,7 @@ import { InvalidPeerError, InvalidSignatureError, InvalidStateError } from './er
 import { decodeAuthorizationHeader, encodeAuthParams, generateChallenge, sign, verify } from './utils.js'
 import { PEER_ID_AUTH_SCHEME } from './index.js'
 import type { BearerTokenHeader, ClientChallengeResponseHeader, ClientResponse, ServerChallengeHeader, VerifyClientChallengeResponseOptions, VerifyPeer } from './index.js'
-import type { PeerId, PrivateKey, PublicKey } from '@libp2p/interface'
-import type { AbortOptions } from '@multiformats/multiaddr'
+import type { PeerId, PrivateKey, PublicKey, AbortOptions } from '@libp2p/interface'
 
 export function isClientChallengeResponse (obj?: any): obj is ClientChallengeResponseHeader {
   if (obj == null) {

@@ -3,9 +3,8 @@ import { fromString as uint8arrayFromString } from 'uint8arrays/from-string'
 import { normalizeContent } from './utils.js'
 import type { SendRequestInit } from './index.js'
 import type { Stream } from '@libp2p/interface'
-import type { ByteStream } from 'it-byte-stream'
 
-export async function sendRequest (bytes: ByteStream<Stream>, url: URL, init: SendRequestInit): Promise<void> {
+export async function sendRequest (stream: Stream, url: URL, init: SendRequestInit): Promise<void> {
   const headers = new Headers(init.headers)
 
   const host = headers.get('host') ?? url.hostname
@@ -24,27 +23,31 @@ export async function sendRequest (bytes: ByteStream<Stream>, url: URL, init: Se
     ''
   ]
 
-  await bytes.write(uint8arrayFromString(req.join('\r\n')), {
-    signal: init.signal ?? undefined
-  })
+  if (!stream.send(uint8arrayFromString(req.join('\r\n')))) {
+    await stream.onDrain({
+      signal: init.signal ?? undefined
+    })
+  }
 
   if (content != null) {
     init.log('request sending body')
-    await sendBody(bytes, content, init)
+    await sendBody(stream, content, init)
   }
 }
 
-async function sendBody (bytes: ByteStream<Stream>, stream: ReadableStream<Uint8Array>, init: SendRequestInit): Promise<void> {
-  const reader = stream.getReader()
+async function sendBody (stream: Stream, body: ReadableStream<Uint8Array>, init: SendRequestInit): Promise<void> {
+  const reader = body.getReader()
 
   while (true) {
     const { done, value } = await reader.read()
 
     if (value != null) {
       init.log('request send %d bytes', value.byteLength)
-      await bytes.write(value, {
-        signal: init.signal ?? undefined
-      })
+      if (!stream.send(value)) {
+        await stream.onDrain({
+          signal: init.signal ?? undefined
+        })
+      }
     }
 
     if (done) {
