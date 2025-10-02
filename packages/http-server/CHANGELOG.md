@@ -1,3 +1,13 @@
+## [@libp2p/http-server-v2.0.0](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-server-1.0.1...@libp2p/http-server-2.0.0) (2025-10-02)
+
+### ⚠ BREAKING CHANGES
+
+* must be used with `libp2p@3.x.x` or later
+
+### Features
+
+* update to libp2p v3 API ([#130](https://github.com/libp2p/js-libp2p-http/issues/130)) ([cb1fedc](https://github.com/libp2p/js-libp2p-http/commit/cb1fedc8364e7c33020a7cb35113a6238cb01197))
+
 ## [@libp2p/http-server-v1.0.1](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-server-1.0.0...@libp2p/http-server-1.0.1) (2025-05-28)
 
 ### Bug Fixes
