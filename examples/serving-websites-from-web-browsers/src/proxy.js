@@ -7,10 +7,10 @@ import { circuitRelayServer, circuitRelayTransport } from '@libp2p/circuit-relay
 import { HTTP_PROTOCOL } from '@libp2p/http'
 import { identify } from '@libp2p/identify'
 import { ping } from '@libp2p/ping'
+import { byteStream } from '@libp2p/utils'
 import { webRTC } from '@libp2p/webrtc'
 import { webSockets } from '@libp2p/websockets'
 import { multiaddr } from '@multiformats/multiaddr'
-import { byteStream } from 'it-byte-stream'
 import { createLibp2p } from 'libp2p'
 
 const args = process.argv.slice(2)

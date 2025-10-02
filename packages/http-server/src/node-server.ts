@@ -28,11 +28,7 @@ class NodeServer implements WebServer {
 
   async inject (info: HeaderInfo, stream: Stream, connection: Connection): Promise<void> {
     // re-yield the headers to enable node to set up the request properly
-    const streamSource = stream.source
-    stream.source = (async function * () {
-      yield info.raw
-      yield * streamSource
-    })()
+    stream.unshift(info.raw)
 
     this.server.emit('connection', streamToSocket(stream, connection))
   }

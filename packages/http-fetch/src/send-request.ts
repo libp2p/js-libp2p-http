@@ -3,7 +3,7 @@ import { fromString as uint8arrayFromString } from 'uint8arrays/from-string'
 import { normalizeContent } from './utils.js'
 import type { SendRequestInit } from './index.js'
 import type { Stream } from '@libp2p/interface'
-import type { ByteStream } from 'it-byte-stream'
+import type { ByteStream } from '@libp2p/utils'
 
 export async function sendRequest (bytes: ByteStream<Stream>, url: URL, init: SendRequestInit): Promise<void> {
   const headers = new Headers(init.headers)

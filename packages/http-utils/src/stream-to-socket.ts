@@ -1,7 +1,5 @@
 import { Duplex } from 'node:stream'
-import { byteStream } from 'it-byte-stream'
-import type { Connection, Stream } from '@libp2p/interface'
-import type { ByteStream } from 'it-byte-stream'
+import type { Connection, Logger, Stream } from '@libp2p/interface'
 import type { Socket, SocketConnectOpts, AddressInfo, SocketReadyState } from 'node:net'
 
 const MAX_TIMEOUT = 2_147_483_647
@@ -16,96 +14,124 @@ export class Libp2pSocket extends Duplex {
   public timeout = MAX_TIMEOUT
   public allowHalfOpen: boolean
 
+  #initStream: Promise<Stream>
   #stream?: Stream
-  #bytes?: ByteStream<Stream>
 
-  constructor () {
+  #log?: Logger
+
+  constructor (initStream: Promise<{ stream: Stream, connection: Connection }>) {
     super()
 
     this.bytesRead = 0
     this.bytesWritten = 0
     this.allowHalfOpen = true
     this.remoteAddress = ''
-  }
 
-  setStream (stream: Stream, connection: Connection): void {
-    this.#bytes = byteStream(stream)
-    this.#stream = stream
-    this.remoteAddress = connection.remoteAddr.toString()
-  }
+    this.#initStream = initStream.then(({ stream, connection }) => {
+      this.#log = stream.log.newScope('libp2p-socket')
+      this.remoteAddress = connection.remoteAddr.toString()
 
-  _write (chunk: Uint8Array, encoding: string, cb: (err?: Error) => void): void {
-    this.#stream?.log('write %d bytes', chunk.byteLength)
+      stream.addEventListener('message', (evt) => {
+        this.push(evt.data.subarray())
+      })
 
-    this.bytesWritten += chunk.byteLength
-    this.#bytes?.write(chunk)
-      .then(() => {
-        cb()
-      }, err => {
-        cb(err)
+      stream.addEventListener('close', (evt) => {
+        if (evt.error != null) {
+          this.destroy(evt.error)
+        } else {
+          this.push(null)
+        }
+      })
+
+      stream.pause()
+
+      this.emit('connect')
+
+      return stream
+    })
+      .catch(err => {
+        this.emit('error', err)
+        throw err
       })
   }
 
-  _read (size: number): void {
-    this.#stream?.log('asked to read %d bytes', size)
+  getStream (cb: (stream: Stream) => void): void {
+    if (this.#stream != null) {
+      cb(this.#stream)
+      return
+    }
 
-    void Promise.resolve().then(async () => {
-      try {
-        while (true) {
-          const chunk = await this.#bytes?.read({
-            signal: AbortSignal.timeout(this.timeout)
+    this.#initStream.then(stream => {
+      this.#stream = stream
+      cb(stream)
+    }, (err) => {
+      this.emit('error', err)
+    })
+  }
+
+  destroy (error?: Error): this {
+    return super.destroy(error)
+  }
+
+  _write (chunk: Uint8Array, encoding: string, cb: (err?: Error) => void): void {
+    this.#log?.('write %d bytes', chunk.byteLength)
+
+    this.bytesWritten += chunk.byteLength
+
+    this.getStream(stream => {
+      if (!stream.send(chunk)) {
+        stream.onDrain()
+          .then(() => {
+            cb()
+          }, (err) => {
+            cb(err)
           })
-
-          if (chunk == null) {
-            this.#stream?.log('socket readable end closed')
-            this.push(null)
-            return
-          }
-
-          this.bytesRead += chunk.byteLength
-
-          this.#stream?.log('socket read %d bytes', chunk.byteLength)
-          const more = this.push(chunk.subarray())
-
-          if (!more) {
-            break
-          }
-        }
-      } catch (err: any) {
-        this.destroy(err)
+      } else {
+        cb()
       }
     })
   }
 
-  _destroy (err: Error, cb: (err?: Error) => void): void {
-    this.#stream?.log('destroy with %d bytes buffered - %e', this.bufferSize, err)
+  _read (size: number): void {
+    this.#log?.('asked to read %d bytes', size)
+    this.getStream(stream => {
+      stream.resume()
+    })
+  }
 
-    if (err != null) {
-      this.#bytes?.unwrap().abort(err)
-      cb()
-    } else {
-      this.#bytes?.unwrap().close()
+  _destroy (err: Error, cb: (err?: Error) => void): void {
+    this.#log?.('destroy with %d bytes buffered - %e', this.bufferSize, err)
+
+    this.getStream(stream => {
+      if (err != null) {
+        stream.abort(err)
+        cb()
+      } else {
+        stream.close()
+          .then(() => {
+            cb()
+          })
+          .catch(err => {
+            stream.abort(err)
+            cb(err)
+          })
+      }
+    })
+  }
+
+  _final (cb: (err?: Error) => void): void {
+    this.#log?.('final')
+
+    this.getStream(stream => {
+      stream.close()
         .then(() => {
           cb()
         })
         .catch(err => {
-          this.#stream?.abort(err)
+          stream.abort(err)
           cb(err)
         })
-    }
-  }
-
-  _final (cb: (err?: Error) => void): void {
-    this.#stream?.log('final')
-
-    this.#bytes?.unwrap().closeWrite()
-      .then(() => {
-        cb()
-      })
-      .catch(err => {
-        this.#bytes?.unwrap().abort(err)
-        cb(err)
-      })
+    })
   }
 
   public get readyState (): SocketReadyState {
@@ -129,7 +155,7 @@ export class Libp2pSocket extends Duplex {
   }
 
   destroySoon (): void {
-    this.#stream?.log('destroySoon with %d bytes buffered', this.bufferSize)
+    this.#log?.('destroySoon with %d bytes buffered', this.bufferSize)
     this.destroy()
   }
 
@@ -138,24 +164,27 @@ export class Libp2pSocket extends Duplex {
   connect (port: number, connectionListener?: () => void): this
   connect (path: string, connectionListener?: () => void): this
   connect (...args: any[]): this {
-    this.#stream?.log('connect %o', args)
+    this.#log?.('connect %o', args)
     return this
   }
 
   setEncoding (encoding?: BufferEncoding): this {
-    this.#stream?.log('setEncoding %s', encoding)
+    this.#log?.('setEncoding %s', encoding)
     return this
   }
 
   resetAndDestroy (): this {
-    this.#stream?.log('resetAndDestroy')
-    this.#stream?.abort(new Error('Libp2pSocket.resetAndDestroy'))
+    this.#log?.('resetAndDestroy')
+
+    this.getStream(stream => {
+      stream.abort(new Error('Libp2pSocket.resetAndDestroy'))
+    })
 
     return this
   }
 
   setTimeout (timeout: number, callback?: () => void): this {
-    this.#stream?.log('setTimeout %d', timeout)
+    this.#log?.('setTimeout %d', timeout)
 
     if (callback != null) {
       this.addListener('timeout', callback)
@@ -167,31 +196,31 @@ export class Libp2pSocket extends Duplex {
   }
 
   setNoDelay (noDelay?: boolean): this {
-    this.#stream?.log('setNoDelay %b', noDelay)
+    this.#log?.('setNoDelay %b', noDelay)
 
     return this
   }
 
   setKeepAlive (enable?: boolean, initialDelay?: number): this {
-    this.#stream?.log('setKeepAlive %b %d', enable, initialDelay)
+    this.#log?.('setKeepAlive %b %d', enable, initialDelay)
 
     return this
   }
 
   address (): AddressInfo | Record<string, any> {
-    this.#stream?.log('address')
+    this.#log?.('address')
 
     return {}
   }
 
   unref (): this {
-    this.#stream?.log('unref')
+    this.#log?.('unref')
 
     return this
   }
 
   ref (): this {
-    this.#stream?.log('ref')
+    this.#log?.('ref')
 
     return this
   }
@@ -204,8 +233,5 @@ export class Libp2pSocket extends Duplex {
 }
 
 export function streamToSocket (stream: Stream, connection: Connection): Socket {
-  const socket = new Libp2pSocket()
-  socket.setStream(stream, connection)
-
-  return socket
+  return new Libp2pSocket(Promise.resolve({ stream, connection }))
 }

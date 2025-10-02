@@ -16,21 +16,15 @@ import type { Dispatcher } from 'undici'
 export type { HTTPComponents } from './http.browser.js'
 
 function createConnection (connectionManager: ConnectionManager, peer: PeerId | Multiaddr | Multiaddr[], options?: AbortOptions): Socket {
-  const socket = new Libp2pSocket()
+  return new Libp2pSocket(
+    Promise.resolve()
+      .then(async () => {
+        const connection = await connectionManager.openConnection(peer, options)
+        const stream = await connection.newStream(HTTP_PROTOCOL, options)
 
-  Promise.resolve()
-    .then(async () => {
-      const connection = await connectionManager.openConnection(peer, options)
-      const stream = await connection.newStream(HTTP_PROTOCOL, options)
-
-      socket.setStream(stream, connection)
-      socket.emit('connect')
-    })
-    .catch(err => {
-      socket.emit('error', err)
-    })
-
-  return socket
+        return { stream, connection }
+      })
+  )
 }
 
 interface HTTPDispatcherComponents {

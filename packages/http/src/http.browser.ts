@@ -9,9 +9,9 @@ import { HTTPRegistrar } from './registrar.js'
 import { prepareAndConnect, prepareAndSendRequest, processResponse } from './utils.js'
 import { WELL_KNOWN_PROTOCOLS_PATH } from './index.js'
 import type { HTTPInit, HTTP as HTTPInterface, ProtocolMap, FetchInit, HTTPRoute, ConnectInit, MiddlewareOptions } from './index.js'
-import type { ComponentLogger, Logger, PeerId, PrivateKey, Startable } from '@libp2p/interface'
+import type { ComponentLogger, Logger, PeerId, PrivateKey, Startable, AbortOptions } from '@libp2p/interface'
 import type { ConnectionManager, Registrar } from '@libp2p/interface-internal'
-import type { AbortOptions, Multiaddr } from '@multiformats/multiaddr'
+import type { Multiaddr } from '@multiformats/multiaddr'
 
 export interface HTTPComponents {
   privateKey: PrivateKey
@@ -198,9 +198,6 @@ export class HTTP implements HTTPInterface, Startable {
       signal: init.signal ?? undefined
     })
 
-    return fetch(stream, new URL(`http://${host}${decodeURIComponent(httpPath)}`), {
-      ...init,
-      logger: this.components.logger
-    })
+    return fetch(stream, new URL(`http://${host}${decodeURIComponent(httpPath)}`), init)
   }
 }

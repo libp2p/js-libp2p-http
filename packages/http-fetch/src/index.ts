@@ -6,14 +6,12 @@
  * socket.
  */
 
-import { byteStream } from 'it-byte-stream'
+import { byteStream } from '@libp2p/utils'
 import { readResponse } from './read-response.js'
 import { sendRequest } from './send-request.js'
-import type { ComponentLogger, Logger, Stream } from '@libp2p/interface'
+import type { Logger, Stream } from '@libp2p/interface'
 
 export interface FetchInit extends RequestInit {
-  logger: ComponentLogger
-
   /**
    * The maximum number of bytes that will be parsed as headers, defaults to
    * 80KB
@@ -28,8 +26,8 @@ export interface SendRequestInit extends RequestInit {
   maxHeaderSize?: number
 }
 
-export async function fetch (stream: Stream, resource: string | URL, init: FetchInit): Promise<Response> {
-  const log = init.logger.forComponent('libp2p:http:fetch')
+export async function fetch (stream: Stream, resource: string | URL, init: FetchInit = {}): Promise<Response> {
+  const log = stream.log.newScope('http-fetch')
   resource = typeof resource === 'string' ? new URL(resource) : resource
   const bytes = byteStream(stream)
 

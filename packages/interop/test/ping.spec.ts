@@ -1,4 +1,5 @@
 /* eslint-env mocha */
+/* eslint-disable max-nested-callbacks */
 
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
@@ -9,7 +10,7 @@ import { pingHTTP } from '@libp2p/http-ping'
 import { stop } from '@libp2p/interface'
 import { peerIdFromPrivateKey } from '@libp2p/peer-id'
 import { webSockets } from '@libp2p/websockets'
-import { multiaddr } from '@multiformats/multiaddr'
+import { CODE_P2P, multiaddr } from '@multiformats/multiaddr'
 import { expect } from 'aegir/chai'
 import { createLibp2p } from 'libp2p'
 import sinon from 'sinon'
@@ -54,6 +55,9 @@ describe('ping - HTTP over libp2p', () => {
       services: {
         http: http(),
         pingHTTP: pingHTTP()
+      },
+      connectionGater: {
+        denyDialMultiaddr: () => false
       }
     })
   })
@@ -106,7 +110,7 @@ describe('ping - libp2p over HTTP', () => {
     it(`should perform ping with a HTTP address with a peer id of a ${test.name} server`, async () => {
       const httpAddr = multiaddr(test.address).encapsulate(`/p2p/${process.env.HTTP_PEER_ID}`)
       const verifyPeer = sinon.stub().callsFake((peerId) => {
-        return peerId.equals(httpAddr.getPeerId())
+        return peerId.equals(httpAddr.getComponents().findLast(c => c.code === CODE_P2P)?.value)
       })
 
       await expect(client.services.pingHTTP.ping(httpAddr, {
@@ -126,7 +130,7 @@ describe('ping - libp2p over HTTP', () => {
 
       const httpAddr = multiaddr(test.address).encapsulate(`/p2p/${peerId}`)
       const verifyPeer = sinon.stub().callsFake((peerId) => {
-        return peerId.equals(httpAddr.getPeerId())
+        return peerId.equals(httpAddr.getComponents().findLast(c => c.code === CODE_P2P)?.value)
       })
 
       await expect(client.services.pingHTTP.ping(httpAddr, {
@@ -179,7 +183,7 @@ describe('ping - libp2p over WebSockets', () => {
     it(`should perform ping with a WebSocket address with a peer id of a ${test.name} server`, async () => {
       const httpAddr = multiaddr(test.address).encapsulate(`/p2p/${process.env.HTTP_PEER_ID}`)
       const verifyPeer = sinon.stub().callsFake((peerId) => {
-        return peerId.equals(httpAddr.getPeerId())
+        return peerId.equals(httpAddr.getComponents().findLast(c => c.code === CODE_P2P)?.value)
       })
 
       await expect(client.services.pingHTTP.ping(httpAddr, {
@@ -200,7 +204,7 @@ describe('ping - libp2p over WebSockets', () => {
 
       const httpAddr = multiaddr(test.address).encapsulate(`/p2p/${peerId}`)
       const verifyPeer = sinon.stub().callsFake((peerId) => {
-        return peerId.equals(httpAddr.getPeerId())
+        return peerId.equals(httpAddr.getComponents().findLast(c => c.code === CODE_P2P)?.value)
       })
 
       await expect(client.services.pingHTTP.ping(httpAddr, {
@@ -249,6 +253,9 @@ describe('ping - WebSockets over libp2p', () => {
       services: {
         http: http(),
         pingHTTP: pingHTTP()
+      },
+      connectionGater: {
+        denyDialMultiaddr: () => false
       }
     })
   })

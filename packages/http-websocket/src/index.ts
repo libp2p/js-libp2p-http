@@ -55,7 +55,22 @@ export interface WebSocket extends TypedEventTarget<WebSocketEvents> {
 export interface WebSocketInit extends AbortOptions {
   headers: Headers
   protocols?: string[]
-  onHandshakeResponse?(res: Response): Promise<void>
+  onHandshakeResponse?(res: Response, options: AbortOptions): Promise<void>
+
+  /**
+   * The WebSocket handshake must complete within this many ms
+   *
+   * @default 10_000
+   */
+  handshakeTimeout?: number
+
+  /**
+   * When the underlying transport's send buffer becomes full, it must drain
+   * within this many ms otherwise the stream will be reset
+   *
+   * @default 10_000
+   */
+  drainTimeout?: number
 }
 
 export { WebSocket, RequestWebSocket, StreamWebSocket, ServerWebSocket } from './websocket.js'

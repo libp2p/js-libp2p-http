@@ -3,7 +3,7 @@ import { Response } from '@libp2p/http-utils'
 import { InvalidResponseError } from './errors.js'
 import type { SendRequestInit } from './index.js'
 import type { Stream } from '@libp2p/interface'
-import type { ByteStream } from 'it-byte-stream'
+import type { ByteStream } from '@libp2p/utils'
 
 const nullBodyStatus = [101, 204, 205, 304]
 
@@ -65,10 +65,13 @@ export async function readResponse (bytes: ByteStream<Stream>, resource: URL, in
       .then(async () => {
         let read = 0
         while (true) {
-          init.log('reading response')
+          init.log('read chunk from response')
+
           const chunk = await bytes.read({
             signal: init.signal ?? undefined
           })
+
+          init.log('read', chunk)
 
           if (chunk == null) {
             const err = parser.finish()
