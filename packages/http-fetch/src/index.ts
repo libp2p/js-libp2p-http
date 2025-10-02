@@ -42,5 +42,10 @@ export async function fetch (stream: Stream, resource: string | URL, init: Fetch
     })
   ])
 
+  // close our writable end we've sent the request
+  await stream.close({
+    signal: init.signal ?? undefined
+  })
+
   return response
 }

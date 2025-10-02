@@ -72,12 +72,6 @@ export async function readResponse (stream: Stream, resource: URL, init: SendReq
     }
 
     parser.finish()
-
-    // close our writable end once the server has finished sending the response
-    stream.close()
-      .catch(err => {
-        stream.abort(err)
-      })
   })
 
   return output.promise
