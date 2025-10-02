@@ -138,15 +138,14 @@
     "release": "aegir release"
   },
   "dependencies": {
-    "@libp2p/crypto": "^5.1.4",
-    "@libp2p/interface": "^2.10.2",
-    "@libp2p/peer-id": "^5.1.5",
-    "@multiformats/multiaddr": "^12.4.0",
+    "@libp2p/crypto": "^5.1.12",
+    "@libp2p/interface": "^3.0.2",
+    "@libp2p/peer-id": "^6.0.3",
     "uint8-varint": "^2.0.4",
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
-    "aegir": "^47.0.16"
+    "aegir": "^47.0.22"
   },
   "sideEffects": false
 }

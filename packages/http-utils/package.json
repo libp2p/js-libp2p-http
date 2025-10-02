@@ -139,21 +139,21 @@
   },
   "dependencies": {
     "@achingbrain/http-parser-js": "^0.5.9",
-    "@libp2p/interface": "^2.10.2",
-    "@libp2p/peer-id": "^5.1.5",
-    "@multiformats/multiaddr": "^12.4.0",
-    "@multiformats/multiaddr-to-uri": "^11.0.0",
-    "@multiformats/uri-to-multiaddr": "^9.0.1",
-    "it-byte-stream": "^2.0.2",
-    "it-queueless-pushable": "^2.0.1",
-    "it-to-browser-readablestream": "^2.0.11",
-    "multiformats": "^13.3.6",
+    "@libp2p/interface": "^3.0.2",
+    "@libp2p/peer-id": "^6.0.3",
+    "@libp2p/utils": "^7.0.4",
+    "@multiformats/multiaddr": "^13.0.1",
+    "@multiformats/multiaddr-to-uri": "^12.0.0",
+    "@multiformats/uri-to-multiaddr": "^10.0.0",
+    "it-to-browser-readablestream": "^2.0.12",
+    "multiformats": "^13.4.1",
+    "race-event": "^1.6.1",
     "readable-stream": "^4.7.0",
     "uint8arraylist": "^2.4.8",
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
-    "aegir": "^47.0.16"
+    "aegir": "^47.0.22"
   },
   "browser": {
     "node:stream": "readable-stream"

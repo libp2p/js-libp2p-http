@@ -1,6 +1,7 @@
 import { MissingAuthHeaderError, DEFAULT_AUTH_TOKEN_TTL, ClientInitiatedHandshake } from '@libp2p/http-peer-id-auth'
 import { getHost, isWebSocketUpgrade } from '@libp2p/http-utils'
 import { InvalidMessageError, InvalidParametersError } from '@libp2p/interface'
+import { CODE_P2P } from '@multiformats/multiaddr'
 import type { Middleware, MiddlewareOptions, HTTP } from '../index.js'
 import type { VerifyPeer } from '@libp2p/http-peer-id-auth'
 import type { ComponentLogger, PeerId, PrivateKey } from '@libp2p/interface'
@@ -180,7 +181,7 @@ function getCacheKey (resource: URL | Multiaddr[], headers: Headers): string {
   let prefix = ''
 
   if (Array.isArray(resource)) {
-    const peer = resource.map(ma => ma.getPeerId())
+    const peer = resource.map(ma => ma.getComponents().findLast(c => c.code === CODE_P2P)?.value)
       .filter(Boolean)
       .pop()
 

@@ -5,7 +5,7 @@ import { HTTP_PROTOCOL, WEBSOCKET_HANDLER } from './constants.js'
 import { initializeRoute } from './routes/utils.js'
 import { wellKnownRoute } from './routes/well-known.js'
 import type { WebServer, HTTPRequestHandler, ProtocolMap, WebSocketHandler, HTTPRoute, HandlerRoute } from './index.js'
-import type { ComponentLogger, IncomingStreamData, Logger } from '@libp2p/interface'
+import type { ComponentLogger, Connection, Logger, Stream } from '@libp2p/interface'
 import type { Registrar } from '@libp2p/interface-internal'
 
 export interface HTTPRegistrarComponents {
@@ -38,19 +38,14 @@ export class HTTPRegistrar {
   }
 
   async start (): Promise<void> {
-    await this.components.registrar.handle(HTTP_PROTOCOL, (data) => {
-      this.onStream(data)
-        .catch(err => {
-          this.log.error('could not handle incoming stream - %e', err)
-        })
-    })
+    await this.components.registrar.handle(HTTP_PROTOCOL, this.onStream.bind(this))
   }
 
   async stop (): Promise<void> {
     await this.components.registrar.unhandle(HTTP_PROTOCOL)
   }
 
-  private async onStream ({ stream, connection }: IncomingStreamData): Promise<void> {
+  private async onStream (stream: Stream, connection: Connection): Promise<void> {
     const info = await readHeaders(stream)
 
     if (this.canHandle(info)) {
@@ -65,7 +60,8 @@ export class HTTPRegistrar {
     // pass request to endpoint if available
     if (this.endpoint == null) {
       this.log('cannot handle incoming request %s %s and no endpoint configured', info.method, info.url)
-      await stream.sink([NOT_FOUND_RESPONSE])
+      stream.send(NOT_FOUND_RESPONSE)
+      await stream.close()
       return
     }
 

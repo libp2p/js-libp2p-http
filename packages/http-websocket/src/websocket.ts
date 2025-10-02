@@ -1,7 +1,6 @@
 import { getHeaders } from '@libp2p/http-utils'
 import { InvalidParametersError, TypedEventEmitter } from '@libp2p/interface'
-import { isPromise } from '@libp2p/utils/is-promise'
-import { byteStream } from 'it-byte-stream'
+import { isPromise, byteStream } from '@libp2p/utils'
 import { Uint8ArrayList } from 'uint8arraylist'
 import { CloseEvent, ErrorEvent } from './events.js'
 import { encodeMessage, decodeMessage, CLOSE_MESSAGES } from './message.js'
@@ -11,8 +10,8 @@ import type { MESSAGE_TYPE } from './message.js'
 import type { HeaderInfo } from '@libp2p/http-utils'
 import type { AbortOptions, Stream } from '@libp2p/interface'
 import type { ConnectionManager } from '@libp2p/interface-internal'
+import type { ByteStream } from '@libp2p/utils'
 import type { Multiaddr } from '@multiformats/multiaddr'
-import type { ByteStream } from 'it-byte-stream'
 import type { IncomingMessage } from 'node:http'
 import type { Duplex } from 'node:stream'
 
@@ -416,7 +415,9 @@ export class RequestWebSocket extends AbstractWebSocket {
 }
 
 export class WebSocket extends AbstractWebSocket {
-  private bytes?: ByteStream<Stream>
+  private stream?: Stream
+  private handshakeTimeout: number
+  private drainTimeout: number
 
   constructor (mas: Multiaddr[], url: URL, connectionManager: ConnectionManager, init: WebSocketInit) {
     super(url, {
@@ -424,23 +425,36 @@ export class WebSocket extends AbstractWebSocket {
       isClient: true
     })
 
+    this.handshakeTimeout = init.handshakeTimeout ?? 10_000
+    this.drainTimeout = init.drainTimeout ?? 10_000
+
     Promise.resolve()
       .then(async () => {
-        const connection = await connectionManager.openConnection(mas, init)
-        const stream = await connection.newStream(HTTP_PROTOCOL, init)
-        this.bytes = byteStream(stream)
+        const signal = AbortSignal.timeout(this.handshakeTimeout)
+        this.stream = await connectionManager.openStream(mas, HTTP_PROTOCOL, {
+          ...init,
+          signal
+        })
 
         for await (const buf of performClientUpgrade(url, init.protocols, getHeaders(init))) {
-          await this.bytes.write(buf)
+          if (!this.stream.send(buf)) {
+            await this.stream.onDrain({
+              signal
+            })
+          }
         }
 
-        const res = await readResponse(this.bytes, {})
+        const res = await readResponse(this.stream, {
+          signal
+        })
 
         if (res.status !== 101) {
           throw new Error('Invalid WebSocket handshake - response status ' + res.status)
         }
 
-        await init.onHandshakeResponse?.(res)
+        await init.onHandshakeResponse?.(res, {
+          signal
+        })
 
         // if a protocol was selected by the server, expose it
         this.protocol = res.headers.get('Sec-WebSocket-Protocol') ?? ''
@@ -448,7 +462,7 @@ export class WebSocket extends AbstractWebSocket {
         this.readyState = this.OPEN
         this.dispatchEvent(new Event('open'))
 
-        for await (const buf of stream.source) {
+        for await (const buf of this.stream) {
           this._push(buf)
         }
       })
@@ -458,36 +472,39 @@ export class WebSocket extends AbstractWebSocket {
   }
 
   _write (buf: Uint8ArrayList, cb: (err?: Error | null) => void): void {
-    if (this.bytes == null) {
+    if (this.stream == null) {
       cb(new Error('WebSocket was not open'))
       return
     }
 
-    this.bytes.write(buf)
-      .then(() => {
+    if (!this.stream.send(buf)) {
+      this.stream.onDrain({
+        signal: AbortSignal.timeout(this.drainTimeout)
+      }).then(() => {
         cb()
       }, (err) => {
         cb(err)
       })
+    } else {
+      cb()
+    }
   }
 
   _close (err: Error | undefined, cb: () => void): void {
-    if (this.bytes == null) {
+    if (this.stream == null) {
       cb()
       return
     }
-
-    const stream = this.bytes.unwrap()
 
     if (err != null) {
-      stream.abort(err)
+      this.stream.abort(err)
       cb()
       return
     }
 
-    stream.close()
+    this.stream.close()
       .catch((err) => {
-        stream.abort(err)
+        this.stream?.abort(err)
       })
       .finally(() => {
         cb()
