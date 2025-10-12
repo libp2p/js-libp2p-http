@@ -18,8 +18,8 @@
   "dependencies": {
     "@chainsafe/libp2p-noise": "^17.0.0",
     "@chainsafe/libp2p-yamux": "^8.0.0",
-    "@libp2p/http": "^1.0.0",
-    "@libp2p/http-server": "^1.0.0",
+    "@libp2p/http": "^2.0.0",
+    "@libp2p/http-server": "^2.0.0",
     "@libp2p/tcp": "^11.0.4",
     "@multiformats/multiaddr": "^13.0.1",
     "express": "^5.1.0",

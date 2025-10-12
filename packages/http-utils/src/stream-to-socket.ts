@@ -13,6 +13,8 @@ export class Libp2pSocket extends Duplex {
   public bytesWritten: number
   public timeout = MAX_TIMEOUT
   public allowHalfOpen: boolean
+  public remoteFamily: string | undefined
+  public remotePort: number | undefined
 
   #initStream: Promise<Stream>
   #stream?: Stream
