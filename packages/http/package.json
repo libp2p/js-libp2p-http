@@ -162,10 +162,10 @@
     "release": "aegir release"
   },
   "dependencies": {
-    "@libp2p/http-fetch": "^3.0.0",
-    "@libp2p/http-peer-id-auth": "^1.0.0",
-    "@libp2p/http-utils": "^1.0.0",
-    "@libp2p/http-websocket": "^1.0.0",
+    "@libp2p/http-fetch": "^4.0.0",
+    "@libp2p/http-peer-id-auth": "^2.0.0",
+    "@libp2p/http-utils": "^2.0.0",
+    "@libp2p/http-websocket": "^2.0.0",
     "@libp2p/interface": "^3.0.2",
     "@libp2p/interface-internal": "^3.0.4",
     "@multiformats/multiaddr": "^13.0.1",

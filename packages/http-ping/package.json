@@ -138,7 +138,7 @@
     "release": "aegir release"
   },
   "dependencies": {
-    "@libp2p/http": "^1.0.0",
+    "@libp2p/http": "^2.0.0",
     "@libp2p/interface": "^3.0.2",
     "@multiformats/multiaddr": "^13.0.1",
     "race-event": "^1.6.1",
