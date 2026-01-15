@@ -300,8 +300,9 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
   let protocol = 'http:'
 
   if (addresses instanceof URL) {
+    const defaultHttpPort = addresses.protocol.includes('https') ? 443 : 80
+    port = !addresses.port ? defaultHttpPort : parseInt(addresses.port, 10)
     host = addresses.hostname
-    port = parseInt(addresses.port, 10)
     protocol = addresses.protocol
   }
 
