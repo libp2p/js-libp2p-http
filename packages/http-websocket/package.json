@@ -26,7 +26,8 @@
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "import": "./dist/src/index.js",
+      "module-sync": "./dist/src/index.js"
     }
   },
   "release": {
@@ -140,17 +141,17 @@
   "dependencies": {
     "@achingbrain/http-parser-js": "^0.5.9",
     "@libp2p/http-utils": "^2.0.0",
-    "@libp2p/interface": "^3.0.2",
-    "@libp2p/interface-internal": "^3.0.4",
-    "@libp2p/utils": "^7.0.4",
+    "@libp2p/interface": "^3.2.0",
+    "@libp2p/interface-internal": "^3.1.0",
+    "@libp2p/utils": "^7.0.15",
     "@multiformats/multiaddr": "^13.0.1",
-    "multiformats": "^13.4.1",
+    "multiformats": "^13.4.2",
     "race-event": "^1.6.1",
     "uint8arraylist": "^2.4.8",
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
-    "aegir": "^47.0.22"
+    "aegir": "^47.1.5"
   },
   "browser": {
     "./dist/src/auth/agent.js": "./dist/src/auth/agent.browser.js",

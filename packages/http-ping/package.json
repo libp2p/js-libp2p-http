@@ -26,7 +26,8 @@
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "import": "./dist/src/index.js",
+      "module-sync": "./dist/src/index.js"
     }
   },
   "release": {
@@ -139,14 +140,14 @@
   },
   "dependencies": {
     "@libp2p/http": "^2.0.0",
-    "@libp2p/interface": "^3.0.2",
+    "@libp2p/interface": "^3.2.0",
     "@multiformats/multiaddr": "^13.0.1",
     "race-event": "^1.6.1",
     "race-signal": "^2.0.0",
     "uint8arrays": "^5.1.0"
   },
   "devDependencies": {
-    "aegir": "^47.0.22"
+    "aegir": "^47.1.5"
   },
   "sideEffects": false
 }

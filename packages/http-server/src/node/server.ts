@@ -23,6 +23,7 @@ export class HTTPServer <
   public requestTimeout: number
   public maxConnections: number
   public connections: number
+  public keepAliveTimeoutBuffer: number
   private _listening: boolean
   private readonly _options: ServerOptions<Request, Response>
 
@@ -38,6 +39,7 @@ export class HTTPServer <
     this.maxHeaderSize = options.maxHeaderSize ?? HTTPParser.maxHeaderSize
     this.maxConnections = 0
     this.connections = 0
+    this.keepAliveTimeoutBuffer = options.keepAliveTimeoutBuffer ?? 1_000
     this._listening = false
     this._options = options
 
