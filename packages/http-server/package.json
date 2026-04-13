@@ -42,12 +42,14 @@
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "import": "./dist/src/index.js",
+      "module-sync": "./dist/src/index.js"
     },
     "./node": {
       "types": "./dist/src/node/index.d.ts",
       "browser": "./dist/src/node/index.browser.js",
-      "import": "./dist/src/node/index.js"
+      "import": "./dist/src/node/index.js",
+      "module-sync": "./dist/src/node/index.js"
     }
   },
   "release": {
@@ -163,15 +165,15 @@
     "@libp2p/http": "^2.0.0",
     "@libp2p/http-utils": "^2.0.0",
     "@libp2p/http-websocket": "^2.0.0",
-    "@libp2p/interface": "^3.0.2",
+    "@libp2p/interface": "^3.2.0",
     "events": "^3.3.0",
     "race-event": "^1.6.1",
     "readable-stream": "^4.7.0",
     "uint8arrays": "^5.1.0",
-    "ws": "^8.18.3"
+    "ws": "^8.20.0"
   },
   "devDependencies": {
-    "aegir": "^47.0.22"
+    "aegir": "^47.1.5"
   },
   "browser": {
     "./dist/src/node/index.js": "./dist/src/node/index.browser.js",
