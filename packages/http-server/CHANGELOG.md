@@ -1,3 +1,9 @@
+## [@libp2p/http-server-v2.0.2](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-server-2.0.1...@libp2p/http-server-2.0.2) (2026-04-28)
+
+### Bug Fixes
+
+* support require ([#135](https://github.com/libp2p/js-libp2p-http/issues/135)) ([0c59999](https://github.com/libp2p/js-libp2p-http/commit/0c59999878e22dff36b425aeab529de4d3fe8eec))
+
 ## [@libp2p/http-server-v2.0.1](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-server-2.0.0...@libp2p/http-server-2.0.1) (2025-10-13)
 
 ### Bug Fixes
