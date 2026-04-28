@@ -1,6 +1,6 @@
 {
   "name": "@libp2p/http",
-  "version": "1.0.5",
+  "version": "2.0.1",
   "description": "Accept HTTP requests over libp2p streams or use libp2p protocols over HTTP",
   "license": "Apache-2.0 OR MIT",
   "homepage": "https://github.com/libp2p/js-libp2p-http/tree/main/packages/http#readme",
@@ -42,15 +42,18 @@
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "import": "./dist/src/index.js",
+      "module-sync": "./dist/src/index.js"
     },
     "./middleware": {
       "types": "./dist/src/middleware/index.d.ts",
-      "import": "./dist/src/middleware/index.js"
+      "import": "./dist/src/middleware/index.js",
+      "module-sync": "./dist/src/middleware/index.js"
     },
     "./routes": {
       "types": "./dist/src/routes/index.d.ts",
-      "import": "./dist/src/routes/index.js"
+      "import": "./dist/src/routes/index.js",
+      "module-sync": "./dist/src/routes/index.js"
     }
   },
   "release": {
@@ -162,18 +165,18 @@
     "release": "aegir release"
   },
   "dependencies": {
-    "@libp2p/http-fetch": "^3.0.0",
-    "@libp2p/http-peer-id-auth": "^1.0.0",
-    "@libp2p/http-utils": "^1.0.0",
-    "@libp2p/http-websocket": "^1.0.0",
-    "@libp2p/interface": "^3.0.2",
-    "@libp2p/interface-internal": "^3.0.4",
+    "@libp2p/http-fetch": "^4.0.0",
+    "@libp2p/http-peer-id-auth": "^2.0.0",
+    "@libp2p/http-utils": "^2.0.0",
+    "@libp2p/http-websocket": "^2.0.0",
+    "@libp2p/interface": "^3.2.0",
+    "@libp2p/interface-internal": "^3.1.0",
     "@multiformats/multiaddr": "^13.0.1",
-    "cookie": "^1.0.2",
-    "undici": "^7.16.0"
+    "cookie": "^1.1.1",
+    "undici": "^8.0.3"
   },
   "devDependencies": {
-    "aegir": "^47.0.22"
+    "aegir": "^47.1.5"
   },
   "browser": {
     "./dist/src/http.js": "./dist/src/http.browser.js"
