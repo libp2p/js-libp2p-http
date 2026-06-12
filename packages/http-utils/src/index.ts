@@ -301,7 +301,7 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
 
   if (addresses instanceof URL) {
     host = addresses.hostname
-    port = parseInt(addresses.port, 10)
+    port = addresses.port === '' ? (addresses.protocol === 'https:' ? 443 : 80) : parseInt(addresses.port, 10)
     protocol = addresses.protocol
   }
 
@@ -362,11 +362,11 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
 
   if (isValidHost(host)) {
     // add port if not standard
-    if (protocol === 'http:' && port !== 80) {
+    if (protocol === 'http:' && !Number.isNaN(port) && port !== 80) {
       host = `${host}:${port}`
     }
 
-    if (protocol === 'https:' && port !== 443) {
+    if (protocol === 'https:' && !Number.isNaN(port) && port !== 443) {
       host = `${host}:${port}`
     }
 

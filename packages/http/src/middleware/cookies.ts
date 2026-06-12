@@ -95,7 +95,11 @@ export class Cookies implements Middleware {
  */
 function removeSetCookie (response: Response): Response {
   if (response.headers.has('set-cookie')) {
-    response.headers.delete('set-cookie')
+    try {
+      response.headers.delete('set-cookie')
+    } catch {
+      // Native fetch response headers can be immutable in Node/undici.
+    }
   }
 
   return response
