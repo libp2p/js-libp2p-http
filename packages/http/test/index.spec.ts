@@ -2,7 +2,7 @@ import { Cookies } from '../src/middleware/cookies.js'
 import { expect } from 'aegir/chai'
 
 describe('@libp2p/http', () => {
-  it('ignores immutable set-cookie response headers', async () => {
+  it('ignores failures when stripping set-cookie from immutable response headers', async () => {
     const cookies = new Cookies({
       logger: {
         forComponent: () => () => {}
