@@ -1,5 +1,5 @@
-import { Cookies } from '../src/middleware/cookies.js'
 import { expect } from 'aegir/chai'
+import { Cookies } from '../src/middleware/cookies.js'
 
 describe('@libp2p/http', () => {
   it('ignores failures when stripping set-cookie from immutable response headers', async () => {

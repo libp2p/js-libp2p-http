@@ -1,5 +1,5 @@
-import { getHost } from '../src/index.js'
 import { expect } from 'aegir/chai'
+import { getHost } from '../src/index.js'
 
 describe('@libp2p/http-utils', () => {
   it('does not append NaN for default URL ports', () => {
