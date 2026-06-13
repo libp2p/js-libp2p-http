@@ -42,7 +42,7 @@ Loading this module through a script tag will make its exports available as `Lib
 
 # API Docs
 
-- <https://libp2p.github.io/js-libp2p-http/modules/_libp2p_http_ping.html>
+- <https://libp2p.github.io/js-libp2p-http/modules/_libp2p_http-ping.html>
 
 # License
 
