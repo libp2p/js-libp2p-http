@@ -1,3 +1,9 @@
+## [@libp2p/http-utils-v2.0.4](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-utils-2.0.3...@libp2p/http-utils-2.0.4) (2026-06-14)
+
+### Trivial Changes
+
+* release on chore ([#139](https://github.com/libp2p/js-libp2p-http/issues/139)) ([6aa226c](https://github.com/libp2p/js-libp2p-http/commit/6aa226c53bb4ad6a89c2ae1bd269b641e0ab3a4a))
+
 ## [@libp2p/http-utils-v2.0.3](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-utils-2.0.2...@libp2p/http-utils-2.0.3) (2026-06-14)
 
 ### Bug Fixes
