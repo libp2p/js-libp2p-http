@@ -31,7 +31,7 @@
     "@libp2p/peer-id": "^6.0.6",
     "@libp2p/ping": "^3.1.0",
     "@libp2p/websockets": "^10.1.8",
-    "@multiformats/multiaddr": "^13.0.1",
+    "@multiformats/multiaddr": "^13.0.3",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/ws": "^8.18.1",

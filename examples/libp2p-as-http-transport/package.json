@@ -20,7 +20,7 @@
     "@libp2p/http": "^2.0.0",
     "@libp2p/http-server": "^2.0.0",
     "@libp2p/tcp": "^11.0.15",
-    "@multiformats/multiaddr": "^13.0.1",
+    "@multiformats/multiaddr": "^13.0.3",
     "express": "^5.2.1",
     "libp2p": "^3.2.0"
   },
