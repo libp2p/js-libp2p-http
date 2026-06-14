@@ -1,3 +1,13 @@
+## [@libp2p/http-utils-v2.0.3](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-utils-2.0.2...@libp2p/http-utils-2.0.3) (2026-06-14)
+
+### Bug Fixes
+
+* Port defaults for HTTP/HTTPS ([#134](https://github.com/libp2p/js-libp2p-http/issues/134)) ([bbd0f61](https://github.com/libp2p/js-libp2p-http/commit/bbd0f61ab1d054cc8936b12ecf2d02d695e84a15))
+
+### Trivial Changes
+
+* bump aegir, multiformats, multiaddr, uint8arraylist deps ([#138](https://github.com/libp2p/js-libp2p-http/issues/138)) ([0c0f7b4](https://github.com/libp2p/js-libp2p-http/commit/0c0f7b4330bc96a8561f0985f742fba9b6badaf6))
+
 ## [@libp2p/http-utils-v2.0.2](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-utils-2.0.1...@libp2p/http-utils-2.0.2) (2026-04-28)
 
 ### Bug Fixes
