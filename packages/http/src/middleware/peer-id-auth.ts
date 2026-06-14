@@ -138,9 +138,10 @@ export class PeerIdAuth implements Middleware {
     return authorization
   }
 
-  processResponse (resource: URL | Multiaddr[], opts: MiddlewareOptions, response: Response): void {
+  processResponse (resource: URL | Multiaddr[], opts: MiddlewareOptions, response: Response): Response | void {
     const key = getCacheKey(resource, opts.headers)
     const token = this.tokens.get(key)
+    let output = response
 
     // add the remote peer id as a response header
     if (token?.peerId != null) {
@@ -148,18 +149,21 @@ export class PeerIdAuth implements Middleware {
       headers.set('x-libp2p-peer-id', token.peerId.toString())
 
       // the headers property is read-only so we can't just re-assign it
-      response = new Response(response.body, {
+      output = new Response(response.body, {
         status: response.status,
+        statusText: response.statusText,
         headers
       })
     }
 
     // store the bearer token if the server provided it
-    const serverAuthHeader = response.headers.get('authentication-info')
+    const serverAuthHeader = output.headers.get('authentication-info')
 
     if (serverAuthHeader != null && token != null) {
       token.authorization = token.handshake.decodeBearerToken(serverAuthHeader)
     }
+
+    return output
   }
 }
 

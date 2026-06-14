@@ -54,7 +54,7 @@ export interface Middleware {
    * Called after a request is made but before the body has been read - the
    * processor may do any necessary housekeeping based on the server response
    */
-  processResponse?(resource: URL | Multiaddr[], opts: MiddlewareOptions, response: Response): void | Promise<void>
+  processResponse?(resource: URL | Multiaddr[], opts: MiddlewareOptions, response: Response): Response | void | Promise<Response | void>
 }
 
 export function toURL (resource: URL | Multiaddr[], headers: Headers): URL {

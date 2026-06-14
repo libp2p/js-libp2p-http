@@ -19,7 +19,7 @@ export async function prepareAndConnect (resource: URL | Multiaddr[], opts: Midd
 
 export async function processResponse (resource: URL | Multiaddr[], opts: MiddlewareOptions, response: Response): Promise<Response> {
   for (const middleware of opts.middleware) {
-    await middleware.processResponse?.(resource, opts, response)
+    response = await middleware.processResponse?.(resource, opts, response) ?? response
   }
 
   return response
