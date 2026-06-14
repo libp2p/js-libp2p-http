@@ -1,4 +1,4 @@
-import type { MiddlewareOptions } from './index.js'
+import type { MiddlewareOptions } from './index.ts'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
 export async function prepareAndSendRequest (resource: URL | Multiaddr[], opts: MiddlewareOptions, sendRequest: () => Promise<Response>): Promise<Response> {

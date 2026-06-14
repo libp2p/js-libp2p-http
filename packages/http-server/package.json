@@ -173,7 +173,7 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
-    "aegir": "^47.1.5"
+    "aegir": "^48.0.11"
   },
   "browser": {
     "./dist/src/node/index.js": "./dist/src/node/index.browser.js",

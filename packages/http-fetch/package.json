@@ -146,7 +146,7 @@
   },
   "devDependencies": {
     "@libp2p/utils": "^7.0.15",
-    "aegir": "^47.1.5"
+    "aegir": "^48.0.11"
   },
   "sideEffects": false
 }

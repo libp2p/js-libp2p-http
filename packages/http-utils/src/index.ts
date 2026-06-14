@@ -18,7 +18,7 @@ import { sha1 } from 'multiformats/hashes/sha1'
 import { raceEvent } from 'race-event'
 import { Uint8ArrayList } from 'uint8arraylist'
 import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
-import { Request } from './request.js'
+import { Request } from './request.ts'
 import type { AbortOptions, PeerId, Stream, StreamMessageEvent } from '@libp2p/interface'
 import type { Multiaddr } from '@multiformats/multiaddr'
 
@@ -571,7 +571,7 @@ export interface HeaderInfo {
   raw: Uint8ArrayList
 }
 
-export * from './request.js'
-export * from './response.js'
-export * from './constants.js'
-export * from './stream-to-socket.js'
+export * from './request.ts'
+export * from './response.ts'
+export * from './constants.ts'
+export * from './stream-to-socket.ts'
