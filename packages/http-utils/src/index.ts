@@ -293,7 +293,7 @@ function isValidHost (host?: string): host is string {
   return host != null && host !== ''
 }
 
-function getDefaultPort(protocol: string): number {
+function getDefaultPort (protocol: string): number {
   switch (protocol) {
     case 'https:': return 443
     case 'wss:': return 443
@@ -310,7 +310,7 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
   let protocol = 'http:'
 
   if (addresses instanceof URL) {
-    port = !addresses.port ? getDefaultPort(addresses.protocol) : parseInt(addresses.port, 10)
+    port = addresses.port === '' ? getDefaultPort(addresses.protocol) : parseInt(addresses.port, 10)
     host = addresses.hostname
     protocol = addresses.protocol
   }
@@ -372,11 +372,7 @@ export function getHost (addresses: URL | Multiaddr[], headers: Headers): string
 
   if (isValidHost(host)) {
     // add port if not standard
-    if (protocol === 'http:' && port !== 80) {
-      host = `${host}:${port}`
-    }
-
-    if (protocol === 'https:' && port !== 443) {
+    if (port !== getDefaultPort(protocol)) {
       host = `${host}:${port}`
     }
 
