@@ -1,3 +1,9 @@
+## [@libp2p/http-v2.0.4](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-2.0.3...@libp2p/http-2.0.4) (2026-06-15)
+
+### Bug Fixes
+
+* preserve peer ID auth response headers ([#140](https://github.com/libp2p/js-libp2p-http/issues/140)) ([cd8a7be](https://github.com/libp2p/js-libp2p-http/commit/cd8a7beefb202b39dd80472cadc1275b86385607))
+
 ## [@libp2p/http-v2.0.3](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-2.0.2...@libp2p/http-2.0.3) (2026-06-14)
 
 ### Trivial Changes
