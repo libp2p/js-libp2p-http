@@ -1,3 +1,9 @@
+## [@libp2p/http-utils-v2.0.5](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-utils-2.0.4...@libp2p/http-utils-2.0.5) (2026-06-15)
+
+### Bug Fixes
+
+* preserve peer ID auth response headers ([#140](https://github.com/libp2p/js-libp2p-http/issues/140)) ([cd8a7be](https://github.com/libp2p/js-libp2p-http/commit/cd8a7beefb202b39dd80472cadc1275b86385607))
+
 ## [@libp2p/http-utils-v2.0.4](https://github.com/libp2p/js-libp2p-http/compare/@libp2p/http-utils-2.0.3...@libp2p/http-utils-2.0.4) (2026-06-14)
 
 ### Trivial Changes
