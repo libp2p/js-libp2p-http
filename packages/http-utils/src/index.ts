@@ -517,6 +517,10 @@ export async function readHeaders (stream: Stream, options?: AbortOptions): Prom
       raw: earlyData,
       method: HTTPParser.methods[info.method]
     }
+
+    // stop at the end of the headers so body bytes that arrived in the same
+    // chunk are pushed back onto the stream instead of being parsed away
+    return 2
   }
 
   try {
