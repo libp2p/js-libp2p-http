@@ -1,5 +1,7 @@
+import { streamPair } from '@libp2p/utils'
 import { expect } from 'aegir/chai'
-import { getHost } from '../src/index.ts'
+import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
+import { getHost, readHeaders, streamToRequest } from '../src/index.ts'
 
 describe('@libp2p/http-utils', () => {
   describe('getHost', () => {
@@ -19,6 +21,19 @@ describe('@libp2p/http-utils', () => {
       expect(getHost(new URL('https://example.com:444'), new Headers())).to.equal('example.com:444')
       expect(getHost(new URL('ws://example.com:8080'), new Headers())).to.equal('example.com:8080')
       expect(getHost(new URL('wss://example.com:444'), new Headers())).to.equal('example.com:444')
+    })
+  })
+
+  describe('readHeaders', () => {
+    it('should leave a body that arrives with the headers on the stream', async () => {
+      const [outboundStream, inboundStream] = await streamPair()
+
+      outboundStream.send(uint8ArrayFromString('POST / HTTP/1.1\r\nHost: example.com\r\nContent-Length: 11\r\n\r\nhello world'))
+      await outboundStream.close()
+
+      const info = await readHeaders(inboundStream)
+
+      expect(await streamToRequest(info, inboundStream).text()).to.equal('hello world')
     })
   })
 })
