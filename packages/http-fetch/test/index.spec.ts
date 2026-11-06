@@ -62,6 +62,38 @@ describe('@libp2p/http-fetch', () => {
     expect(await res.text()).to.equal('Hello World')
   })
 
+  it('should keep the content-type of a string body', async () => {
+    const [outboundStream, inboundStream] = await streamPair()
+
+    echo(inboundStream)
+
+    const res = await fetch(outboundStream, 'https://example.com', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: '{"hello":"world"}'
+    })
+
+    expect(res.headers.get('content-type')).to.equal('application/json')
+  })
+
+  it('should keep the content-type of a bytes body', async () => {
+    const [outboundStream, inboundStream] = await streamPair()
+
+    echo(inboundStream)
+
+    const res = await fetch(outboundStream, 'https://example.com', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/cbor'
+      },
+      body: Uint8Array.from([0xa1, 0x61, 0x61, 0x01])
+    })
+
+    expect(res.headers.get('content-type')).to.equal('application/cbor')
+  })
+
   it('should handle trash', async () => {
     const [outboundStream, inboundStream] = await streamPair()
 
