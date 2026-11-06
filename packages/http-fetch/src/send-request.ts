@@ -17,7 +17,7 @@ export async function sendRequest (stream: Stream, url: URL, init: SendRequestIn
   const content = normalizeContent(init.body, headers)
 
   const req = [
-    `${init?.method?.toUpperCase() ?? 'GET'} ${url.pathname ?? '/'} HTTP/1.1`,
+    `${init?.method?.toUpperCase() ?? 'GET'} ${url.pathname ?? '/'}${url.search} HTTP/1.1`,
     ...writeHeaders(headers),
     '',
     ''
