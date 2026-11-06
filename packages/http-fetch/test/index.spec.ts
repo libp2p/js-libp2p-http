@@ -49,6 +49,18 @@ describe('@libp2p/http-fetch', () => {
     expect(res.headers.get('X-Test')).to.equal('foo')
   })
 
+  it('should send the query string', async () => {
+    const [outboundStream, inboundStream] = await streamPair()
+
+    serve(inboundStream, (req) => {
+      return new Response(new URL(req.url).search)
+    })
+
+    const res = await fetch(outboundStream, 'https://example.com/path?a=1&b=two')
+
+    expect(await res.text()).to.equal('?a=1&b=two')
+  })
+
   it('should POST some data', async () => {
     const [outboundStream, inboundStream] = await streamPair()
 
