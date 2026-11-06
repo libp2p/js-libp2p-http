@@ -62,6 +62,19 @@ describe('@libp2p/http-fetch', () => {
     expect(await res.text()).to.equal('Hello World')
   })
 
+  it('should POST a string body with multi-byte characters', async () => {
+    const [outboundStream, inboundStream] = await streamPair()
+
+    echo(inboundStream)
+
+    const res = await fetch(outboundStream, 'https://example.com', {
+      method: 'POST',
+      body: 'héllo wörld 😀'
+    })
+
+    expect(await res.text()).to.equal('héllo wörld 😀')
+  })
+
   it('should handle trash', async () => {
     const [outboundStream, inboundStream] = await streamPair()
 
